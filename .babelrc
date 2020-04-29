@@ -1,0 +1,20 @@
+{
+  "plugins": [
+    [
+      "@babel/transform-react-jsx",
+      {
+        "pragma": "OwnReact.createElement"
+      }
+    ]
+  ],
+  "presets": [
+    [
+      "env",
+      {
+        "targets": {
+          "node": "current"
+        }
+      }
+    ]
+  ]
+}
