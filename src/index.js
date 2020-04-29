@@ -1,6 +1,6 @@
-const OwnReact = require('../lib/OwnReact');
-const App = require('./App.jsx');
+import App from './App.jsx';
+import React from 'react';
 
 window.addEventListener('DOMContentLoaded', () => {
-  OwnReact.render(App, document.getElementById('root'));
+  React.render(App, document.getElementById('root'));
 });

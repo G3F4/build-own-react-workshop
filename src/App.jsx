@@ -1,4 +1,4 @@
-const OwnReact = require('../lib/OwnReact');
+import React from 'react';
 
 const App = (
   <div>
@@ -7,11 +7,11 @@ const App = (
       <p>
         It's awesome!
       </p>
-      <button onclick={() => { console.log('wow'); }}>
+      <button onclick={() => { alert('wow'); }}>
         Click it like it's hot!
       </button>
     </div>
   </div>
 );
 
-module.exports = App;
+export default App;

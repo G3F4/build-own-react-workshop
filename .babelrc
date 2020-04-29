@@ -1,10 +1,7 @@
 {
   "plugins": [
     [
-      "@babel/transform-react-jsx",
-      {
-        "pragma": "OwnReact.createElement"
-      }
+      "@babel/transform-react-jsx"
     ]
   ],
   "presets": [
