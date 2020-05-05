@@ -1,6 +1,6 @@
 import App from './App.jsx';
-import React from 'react';
+import ReactDom from 'react-dom';
 
 window.addEventListener('DOMContentLoaded', () => {
-  React.render(App, document.getElementById('root'));
+  ReactDom.render(App, document.getElementById('root'));
 });

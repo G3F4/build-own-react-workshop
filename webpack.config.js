@@ -10,7 +10,8 @@ module.exports = {
   },
   resolve: {
     alias: {
-      react: path.resolve(__dirname, 'lib/OwnReact')
+      react: path.resolve(__dirname, 'lib/OwnReact'),
+      ['react-dom']: path.resolve(__dirname, 'lib/OwnReactDom')
     }
   },
   module: {
