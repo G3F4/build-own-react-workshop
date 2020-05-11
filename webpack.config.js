@@ -4,7 +4,7 @@ const HtmlWebPackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   mode: 'development',
-  entry: './src/index.ts',
+  entry: './src/index.tsx',
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
@@ -12,7 +12,7 @@ module.exports = {
   resolve: {
     alias: {
       react: path.resolve(__dirname, 'lib/OwnReact.ts'),
-      'react-dom': path.resolve(__dirname, 'lib/OwnReactDOM.ts'),
+      'react-dom': path.resolve(__dirname, 'lib/OwnReact.ts'),
     },
   },
   module: {
