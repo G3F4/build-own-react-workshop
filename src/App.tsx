@@ -1,5 +1,30 @@
 import React from 'react';
 
+class TestClassComponent extends React.Component<
+  { testProp: string },
+  { testState: boolean }
+> {
+  state = { testState: true };
+
+  render() {
+    const { testProp } = this.props;
+    const { testState } = this.state;
+
+    return testState && <div>{testProp}</div>;
+  }
+}
+
+class ExtendedTestClassComponent extends TestClassComponent {
+  render() {
+    const { testProp } = this.props;
+    const { testState } = this.state;
+
+    console.log(['ExtendedTestClassComponent.render'], this);
+
+    return testState && <div>{testProp}</div>;
+  }
+}
+
 function GrowingButton({ label }) {
   const [buttonSize, setButtonSize] = React.useState(10);
 
@@ -21,6 +46,7 @@ function App() {
         <p>It's awesome!</p>
         <GrowingButton label="Click it like it's hot!" />
       </div>
+      <ExtendedTestClassComponent testProp="orajt" />
     </div>
   );
 }

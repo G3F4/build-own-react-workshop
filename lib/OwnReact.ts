@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 function createElement(type, props, ...children) {
+  console.log(['createElement.type'], type);
   return {
     type,
     props: {
@@ -171,11 +172,23 @@ function performUnitOfWork(fiber) {
 let wipFiber = null;
 let hookIndex = null;
 
+function shouldConstruct(Component) {
+  return typeof Component === 'function' && Component.isReactComponent;
+}
+
+function renderClassComponent(Component, props) {
+  const instance = new Component(props);
+
+  return instance.render();
+}
+
 function updateFunctionComponent(fiber) {
   wipFiber = fiber;
   hookIndex = 0;
   wipFiber.hooks = [];
-  const elements = [fiber.type(fiber.props)];
+  const elements = shouldConstruct(fiber.type)
+    ? [renderClassComponent(fiber.type, fiber.props)]
+    : [fiber.type(fiber.props)];
   reconcileChildren(fiber, elements);
 }
 
@@ -268,7 +281,22 @@ function reconcileChildren(fiber, elements) {
   }
 }
 
+class Component {
+  static isReactComponent = true;
+
+  props: Record<string, never>;
+
+  constructor(props) {
+    this.props = props;
+  }
+
+  render() {
+    throw new Error('implement render method');
+  }
+}
+
 const OwnReact = {
+  Component,
   createElement,
   render,
   useState,
