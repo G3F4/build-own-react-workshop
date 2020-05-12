@@ -135,7 +135,7 @@ let deletions = null;
 
 function workLoop(deadline) {
   let shouldYield = false;
-  while (nextUnitOfWork && !shouldYield) {
+  while (nextUnitOfWork) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;
   }
@@ -175,8 +175,8 @@ function updateFunctionComponent(fiber) {
   wipFiber = fiber;
   hookIndex = 0;
   wipFiber.hooks = [];
-  const children = [fiber.type(fiber.props)];
-  reconcileChildren(fiber, children);
+  const elements = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, elements);
 }
 
 function useState(initial) {
@@ -217,9 +217,9 @@ function updateHostComponent(fiber) {
   reconcileChildren(fiber, fiber.props.children);
 }
 
-function reconcileChildren(wipFiber, elements) {
+function reconcileChildren(fiber, elements) {
   let index = 0;
-  let oldFiber = wipFiber.alternate && wipFiber.alternate.child;
+  let oldFiber = fiber.alternate && fiber.alternate.child;
   let prevSibling = null;
 
   while (index < elements.length || oldFiber != null) {
@@ -233,7 +233,7 @@ function reconcileChildren(wipFiber, elements) {
         type: oldFiber.type,
         props: element.props,
         dom: oldFiber.dom,
-        parent: wipFiber,
+        parent: fiber,
         alternate: oldFiber,
         effectTag: 'UPDATE',
       };
@@ -243,7 +243,7 @@ function reconcileChildren(wipFiber, elements) {
         type: element.type,
         props: element.props,
         dom: null,
-        parent: wipFiber,
+        parent: fiber,
         alternate: null,
         effectTag: 'PLACEMENT',
       };
@@ -258,7 +258,7 @@ function reconcileChildren(wipFiber, elements) {
     }
 
     if (index === 0) {
-      wipFiber.child = newFiber;
+      fiber.child = newFiber;
     } else if (element) {
       prevSibling.sibling = newFiber;
     }

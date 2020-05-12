@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 import React from 'react';
 
 function GrowingButton({ label }) {
@@ -18,7 +17,7 @@ function App() {
   return (
     <div>
       <h1>My Own React App!</h1>
-      <div className="content">
+      <div>
         <p>It's awesome!</p>
         <GrowingButton label="Click it like it's hot!" />
       </div>
