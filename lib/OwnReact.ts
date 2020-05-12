@@ -1,4 +1,32 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
+let nextUnitOfWork = null;
+let workDone = null;
+let workInProgress = null;
+let workInProgressRoot = null;
+let deletions = null;
+let hookIndex = null;
+
+function render(element, container) {
+  workInProgressRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: workDone,
+  };
+  deletions = [];
+  nextUnitOfWork = workInProgressRoot;
+}
+
+function createTextElement(text) {
+  return {
+    type: 'TEXT_ELEMENT',
+    props: {
+      nodeValue: text,
+      children: [],
+    },
+  };
+}
+
 function createElement(type, props, ...children) {
   console.log(['createElement.type'], type);
 
@@ -13,31 +41,21 @@ function createElement(type, props, ...children) {
   };
 }
 
-function createTextElement(text) {
-  return {
-    type: 'TEXT_ELEMENT',
-    props: {
-      nodeValue: text,
-      children: [],
-    },
-  };
+function isEvent(key) {
+  return key.startsWith('on');
 }
 
-function createDom(fiber) {
-  const dom =
-    fiber.type == 'TEXT_ELEMENT'
-      ? document.createTextNode('')
-      : document.createElement(fiber.type);
-
-  updateDom(dom, {}, fiber.props);
-
-  return dom;
+function isProperty(key) {
+  return key !== 'children' && !isEvent(key);
 }
 
-const isEvent = (key) => key.startsWith('on');
-const isProperty = (key) => key !== 'children' && !isEvent(key);
-const isNew = (prev, next) => (key) => prev[key] !== next[key];
-const isGone = (prev, next) => (key) => !(key in next);
+function isNew(prev, next) {
+  return (key) => prev[key] !== next[key];
+}
+
+function isGone(prev, next) {
+  return (key) => !(key in next);
+}
 
 function updateDom(dom, prevProps, nextProps) {
   //Remove old or changed event listeners
@@ -83,11 +101,23 @@ function updateDom(dom, prevProps, nextProps) {
     });
 }
 
-function commitRoot() {
-  deletions.forEach(commitWork);
-  commitWork(wipRoot.child);
-  currentRoot = wipRoot;
-  wipRoot = null;
+function createDom(fiber) {
+  const dom =
+    fiber.type == 'TEXT_ELEMENT'
+      ? document.createTextNode('')
+      : document.createElement(fiber.type);
+
+  updateDom(dom, {}, fiber.props);
+
+  return dom;
+}
+
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    commitDeletion(fiber.child, domParent);
+  }
 }
 
 function commitWork(fiber) {
@@ -95,10 +125,10 @@ function commitWork(fiber) {
     return;
   }
 
-  let domParentFiber = fiber.parent;
+  let domParentFiber = fiber.return;
 
   while (!domParentFiber.dom) {
-    domParentFiber = domParentFiber.parent;
+    domParentFiber = domParentFiber.return;
   }
 
   const domParent = domParentFiber.dom;
@@ -115,135 +145,11 @@ function commitWork(fiber) {
   commitWork(fiber.sibling);
 }
 
-function commitDeletion(fiber, domParent) {
-  if (fiber.dom) {
-    domParent.removeChild(fiber.dom);
-  } else {
-    commitDeletion(fiber.child, domParent);
-  }
-}
-
-function render(element, container) {
-  wipRoot = {
-    dom: container,
-    props: {
-      children: [element],
-    },
-    alternate: currentRoot,
-  };
-  deletions = [];
-  nextUnitOfWork = wipRoot;
-}
-
-let nextUnitOfWork = null;
-let currentRoot = null;
-let wipRoot = null;
-let deletions = null;
-
-function workLoop(deadline) {
-  let shouldYield = false;
-
-  while (nextUnitOfWork && !shouldYield) {
-    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
-    shouldYield = deadline.timeRemaining() < 1;
-  }
-
-  if (!nextUnitOfWork && wipRoot) {
-    commitRoot();
-  }
-
-  requestIdleCallback(workLoop);
-}
-
-requestIdleCallback(workLoop);
-
-function performUnitOfWork(fiber) {
-  const isFunctionComponent = fiber.type instanceof Function;
-
-  if (isFunctionComponent) {
-    updateFunctionComponent(fiber);
-  } else {
-    updateHostComponent(fiber);
-  }
-
-  if (fiber.child) {
-    return fiber.child;
-  }
-
-  let nextFiber = fiber;
-
-  while (nextFiber) {
-    if (nextFiber.sibling) {
-      return nextFiber.sibling;
-    }
-
-    nextFiber = nextFiber.parent;
-  }
-}
-
-let wipFiber = null;
-let hookIndex = null;
-
-function shouldConstruct(Component) {
-  return typeof Component === 'function' && Component.isReactComponent;
-}
-
-function renderClassComponent(Component, props) {
-  const instance = new Component(props);
-
-  return instance.render();
-}
-
-function updateFunctionComponent(fiber) {
-  wipFiber = fiber;
-  hookIndex = 0;
-  wipFiber.hooks = [];
-
-  const elements = shouldConstruct(fiber.type)
-    ? [renderClassComponent(fiber.type, fiber.props)]
-    : [fiber.type(fiber.props)];
-
-  reconcileChildren(fiber, elements);
-}
-
-function useState(initial) {
-  const oldHook =
-    wipFiber.alternate &&
-    wipFiber.alternate.hooks &&
-    wipFiber.alternate.hooks[hookIndex];
-  const hook = {
-    state: oldHook ? oldHook.state : initial,
-    queue: [],
-  };
-  const actions = oldHook ? oldHook.queue : [];
-
-  actions.forEach((action) => {
-    hook.state = action(hook.state);
-  });
-
-  const setState = (action) => {
-    hook.queue.push(action);
-    wipRoot = {
-      dom: currentRoot.dom,
-      props: currentRoot.props,
-      alternate: currentRoot,
-    };
-    nextUnitOfWork = wipRoot;
-    deletions = [];
-  };
-
-  wipFiber.hooks.push(hook);
-  hookIndex++;
-
-  return [hook.state, setState];
-}
-
-function updateHostComponent(fiber) {
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber);
-  }
-
-  reconcileChildren(fiber, fiber.props.children);
+function commitRoot() {
+  deletions.forEach(commitWork);
+  commitWork(workInProgressRoot.child);
+  workDone = workInProgressRoot;
+  workInProgressRoot = null;
 }
 
 function reconcileChildren(fiber, elements) {
@@ -253,15 +159,15 @@ function reconcileChildren(fiber, elements) {
 
   while (index < elements.length || oldFiber != null) {
     const element = elements[index];
-    let newFiber = null;
     const sameType = oldFiber && element && element.type == oldFiber.type;
+    let newFiber = null;
 
     if (sameType) {
       newFiber = {
         type: oldFiber.type,
         props: element.props,
         dom: oldFiber.dom,
-        parent: fiber,
+        return: fiber,
         alternate: oldFiber,
         effectTag: 'UPDATE',
       };
@@ -272,7 +178,7 @@ function reconcileChildren(fiber, elements) {
         type: element.type,
         props: element.props,
         dom: null,
-        parent: fiber,
+        return: fiber,
         alternate: null,
         effectTag: 'PLACEMENT',
       };
@@ -298,19 +204,127 @@ function reconcileChildren(fiber, elements) {
   }
 }
 
+function renderClassComponent(Component, props) {
+  const instance = new Component(props);
+
+  return instance.render();
+}
+
+function shouldConstruct(Component) {
+  return typeof Component === 'function' && Component.isReactComponent;
+}
+
+function updateFunctionComponent(fiber) {
+  workInProgress = fiber;
+  hookIndex = 0;
+  workInProgress.hooks = [];
+
+  const elements = shouldConstruct(fiber.type)
+    ? [renderClassComponent(fiber.type, fiber.props)]
+    : [fiber.type(fiber.props)];
+
+  reconcileChildren(fiber, elements);
+}
+
+function updateHostComponent(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function useState(initial) {
+  const oldHook =
+    workInProgress.alternate &&
+    workInProgress.alternate.hooks &&
+    workInProgress.alternate.hooks[hookIndex];
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [],
+  };
+  const actions = oldHook ? oldHook.queue : [];
+
+  actions.forEach((action) => {
+    hook.state = action(hook.state);
+  });
+
+  function setState(action) {
+    hook.queue.push(action);
+    workInProgressRoot = {
+      dom: workDone.dom,
+      props: workDone.props,
+      alternate: workDone,
+    };
+    nextUnitOfWork = workInProgressRoot;
+    deletions = [];
+  }
+
+  workInProgress.hooks.push(hook);
+  hookIndex++;
+
+  return [hook.state, setState];
+}
+
 class Component {
   static isReactComponent = true;
 
-  props: Record<string, never>;
+  props;
+  state;
 
   constructor(props) {
     this.props = props;
+  }
+
+  setState(statePartial) {
+    Object.assign(this.state, statePartial);
   }
 
   render() {
     throw new Error('implement render method');
   }
 }
+
+function performUnitOfWork(fiber) {
+  const isFunctionComponent = fiber.type instanceof Function;
+
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
+  }
+
+  if (fiber.child) {
+    return fiber.child;
+  }
+
+  let nextFiber = fiber;
+
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
+    }
+
+    nextFiber = nextFiber.return;
+  }
+}
+
+function workLoop(deadline) {
+  let shouldYield = false;
+
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    shouldYield = deadline.timeRemaining() < 1;
+  }
+
+  if (!nextUnitOfWork && workInProgressRoot) {
+    commitRoot();
+  }
+
+  requestIdleCallback(workLoop);
+}
+
+requestIdleCallback(workLoop);
 
 const OwnReact = {
   Component,
