@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 function createElement(type, props, ...children) {
   console.log(['createElement.type'], type);
+
   return {
     type,
     props: {
@@ -37,6 +38,7 @@ const isEvent = (key) => key.startsWith('on');
 const isProperty = (key) => key !== 'children' && !isEvent(key);
 const isNew = (prev, next) => (key) => prev[key] !== next[key];
 const isGone = (prev, next) => (key) => !(key in next);
+
 function updateDom(dom, prevProps, nextProps) {
   //Remove old or changed event listeners
   Object.keys(prevProps)
@@ -44,6 +46,7 @@ function updateDom(dom, prevProps, nextProps) {
     .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
     .forEach((name) => {
       const eventType = name.toLowerCase().substring(2);
+
       dom.removeEventListener(eventType, prevProps[name]);
     });
 
@@ -75,6 +78,7 @@ function updateDom(dom, prevProps, nextProps) {
     .filter(isNew(prevProps, nextProps))
     .forEach((name) => {
       const eventType = name.toLowerCase().substring(2);
+
       dom.addEventListener(eventType, nextProps[name]);
     });
 }
@@ -92,9 +96,11 @@ function commitWork(fiber) {
   }
 
   let domParentFiber = fiber.parent;
+
   while (!domParentFiber.dom) {
     domParentFiber = domParentFiber.parent;
   }
+
   const domParent = domParentFiber.dom;
 
   if (fiber.effectTag === 'PLACEMENT' && fiber.dom != null) {
@@ -136,7 +142,8 @@ let deletions = null;
 
 function workLoop(deadline) {
   let shouldYield = false;
-  while (nextUnitOfWork) {
+
+  while (nextUnitOfWork && !shouldYield) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;
   }
@@ -152,19 +159,24 @@ requestIdleCallback(workLoop);
 
 function performUnitOfWork(fiber) {
   const isFunctionComponent = fiber.type instanceof Function;
+
   if (isFunctionComponent) {
     updateFunctionComponent(fiber);
   } else {
     updateHostComponent(fiber);
   }
+
   if (fiber.child) {
     return fiber.child;
   }
+
   let nextFiber = fiber;
+
   while (nextFiber) {
     if (nextFiber.sibling) {
       return nextFiber.sibling;
     }
+
     nextFiber = nextFiber.parent;
   }
 }
@@ -186,9 +198,11 @@ function updateFunctionComponent(fiber) {
   wipFiber = fiber;
   hookIndex = 0;
   wipFiber.hooks = [];
+
   const elements = shouldConstruct(fiber.type)
     ? [renderClassComponent(fiber.type, fiber.props)]
     : [fiber.type(fiber.props)];
+
   reconcileChildren(fiber, elements);
 }
 
@@ -201,8 +215,8 @@ function useState(initial) {
     state: oldHook ? oldHook.state : initial,
     queue: [],
   };
-
   const actions = oldHook ? oldHook.queue : [];
+
   actions.forEach((action) => {
     hook.state = action(hook.state);
   });
@@ -220,6 +234,7 @@ function useState(initial) {
 
   wipFiber.hooks.push(hook);
   hookIndex++;
+
   return [hook.state, setState];
 }
 
@@ -227,6 +242,7 @@ function updateHostComponent(fiber) {
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
+
   reconcileChildren(fiber, fiber.props.children);
 }
 
@@ -238,7 +254,6 @@ function reconcileChildren(fiber, elements) {
   while (index < elements.length || oldFiber != null) {
     const element = elements[index];
     let newFiber = null;
-
     const sameType = oldFiber && element && element.type == oldFiber.type;
 
     if (sameType) {
@@ -251,6 +266,7 @@ function reconcileChildren(fiber, elements) {
         effectTag: 'UPDATE',
       };
     }
+
     if (element && !sameType) {
       newFiber = {
         type: element.type,
@@ -261,6 +277,7 @@ function reconcileChildren(fiber, elements) {
         effectTag: 'PLACEMENT',
       };
     }
+
     if (oldFiber && !sameType) {
       oldFiber.effectTag = 'DELETION';
       deletions.push(oldFiber);

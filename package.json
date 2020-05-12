@@ -3,7 +3,7 @@
     "dev": "webpack-dev-server --open --mode development",
     "start": "http-server dist -c-1",
     "build": "webpack",
-    "lint": "eslint ."
+    "lint": "eslint ./src ./lib"
   },
   "dependencies": {
     "@babel/core": "7.9.0",

@@ -23,7 +23,17 @@
   "rules": {
     "@typescript-eslint/explicit-function-return-type": "off",
     "react/no-unescaped-entities": "off",
-    "react/prop-types": "off"
+    "react/prop-types": "off",
+    "padding-line-between-statements": [
+      "error",
+      { "blankLine": "always", "prev": "*", "next": ["return", "break", "continue"] },
+      { "blankLine": "always", "prev": ["if", "class", "for", "function", "switch", "throw", "while", "with", "block"], "next": "*" },
+      { "blankLine": "always", "prev": "*", "next": ["if", "class", "for", "function", "switch", "throw", "while", "with", "block"] },
+      { "blankLine": "always", "prev": ["const", "let"], "next": "expression" },
+      { "blankLine": "always", "prev": "expression", "next": ["const", "let"] },
+      { "blankLine": "never", "prev": ["const", "let"], "next": ["const", "let"] },
+      { "blankLine": "never", "prev": ["case", "default"], "next": ["case", "default"] }
+    ]
   },
   "settings": {
     "react": {
