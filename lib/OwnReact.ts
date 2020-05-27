@@ -42,13 +42,13 @@ function render(element: Element, container: HTMLElement) {
   nextUnitOfWork = workInProgressRoot;
 }
 
-function createTextElement(text: string) {
+function createTextElement(text: unknown) {
   console.log(['createTextElement'], { text });
 
   return {
     type: 'TEXT_ELEMENT',
     props: {
-      nodeValue: text,
+      nodeValue: typeof text === 'string' ? text : '',
       children: [],
     },
   };
