@@ -39,14 +39,28 @@ function GrowingButton({ label }) {
 }
 
 function App() {
+  const [visible, setVisible] = React.useState(true);
+
+  function disappear() {
+    setVisible(() => false);
+  }
+
+  function appear() {
+    setVisible(() => true);
+  }
+
   return (
     <div>
       <h1>My Own React App!</h1>
       <div>
         <p>It's awesome!</p>
-        <GrowingButton label="Click it like it's hot!" />
+        {visible && <GrowingButton label="Click it like it's hot!" />}
+        <button onClick={visible ? disappear : appear}>{`${
+          visible ? 'disappear' : 'appear'
+        } now!`}</button>
       </div>
-      <ExtendedTestClassComponent testProp="orajt" />
+      <br />
+      <ExtendedTestClassComponent testProp="I'm classy" />
     </div>
   );
 }

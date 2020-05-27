@@ -1,11 +1,36 @@
-let nextUnitOfWork = null;
-let workDone = null;
-let workInProgress = null;
-let workInProgressRoot = null;
-let deletions = null;
-let hookIndex = null;
+console.log(['script loaded']);
 
-function render(element, container) {
+let nextUnitOfWork: Fiber = null;
+let workDone: Fiber = null;
+let workInProgress: Fiber = null;
+let workInProgressRoot: Fiber = null;
+let deletions: any[] = null;
+let hookIndex: number | null = null;
+
+interface Element {
+  $$typeof?: never;
+  type;
+  props: {
+    children: Element[];
+  };
+}
+
+interface Fiber {
+  type?: any;
+  effectTag?: string;
+  dom: HTMLElement;
+  props: {
+    children: Element[];
+  };
+  alternate: Fiber;
+  parent?: Fiber;
+  child?: Fiber;
+  sibling?: Fiber;
+  hooks?: any[];
+}
+
+function render(element: Element, container: HTMLElement) {
+  console.log(['render'], { element, container });
   workInProgressRoot = {
     dom: container,
     props: {
@@ -17,7 +42,9 @@ function render(element, container) {
   nextUnitOfWork = workInProgressRoot;
 }
 
-function createTextElement(text) {
+function createTextElement(text: string) {
+  console.log(['createTextElement'], { text });
+
   return {
     type: 'TEXT_ELEMENT',
     props: {
@@ -27,10 +54,15 @@ function createTextElement(text) {
   };
 }
 
-function createElement(type, props, ...children) {
-  console.log(['createElement.type'], type);
+function createElement(
+  type: string,
+  props: Record<string, unknown>,
+  ...children: Element[]
+) {
+  console.log(['createElement'], { type, props, children });
 
   return {
+    $$typeof: Symbol('react.element'),
     type,
     props: {
       ...props,
@@ -41,23 +73,28 @@ function createElement(type, props, ...children) {
   };
 }
 
-function isEvent(key) {
+function isEvent(key: string) {
   return key.startsWith('on');
 }
 
-function isProperty(key) {
+function isProperty(key: string) {
   return key !== 'children' && !isEvent(key);
 }
 
-function isNew(prev, next) {
+function isNew(prev: Record<string, unknown>, next: Record<string, unknown>) {
   return (key) => prev[key] !== next[key];
 }
 
-function isGone(prev, next) {
+function isGone(prev: Record<string, unknown>, next: Record<string, unknown>) {
   return (key) => !(key in next);
 }
 
-function updateDom(dom, prevProps, nextProps) {
+function updateDom(
+  dom: HTMLElement,
+  prevProps: Record<string, unknown>,
+  nextProps: Record<string, unknown>,
+) {
+  console.log(['updateDom'], { dom, prevProps, nextProps });
   //Remove old or changed event listeners
   Object.keys(prevProps)
     .filter(isEvent)
@@ -65,6 +102,8 @@ function updateDom(dom, prevProps, nextProps) {
     .forEach((name) => {
       const eventType = name.toLowerCase().substring(2);
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // @ts-ignore
       dom.removeEventListener(eventType, prevProps[name]);
     });
 
@@ -97,11 +136,15 @@ function updateDom(dom, prevProps, nextProps) {
     .forEach((name) => {
       const eventType = name.toLowerCase().substring(2);
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // @ts-ignore
       dom.addEventListener(eventType, nextProps[name]);
     });
 }
 
-function createDom(fiber) {
+function createDom(fiber: Fiber) {
+  console.log(['createDom'], { fiber });
+
   const dom =
     fiber.type == 'TEXT_ELEMENT'
       ? document.createTextNode('')
@@ -112,7 +155,9 @@ function createDom(fiber) {
   return dom;
 }
 
-function commitDeletion(fiber, domParent) {
+function commitDeletion(fiber: Fiber, domParent: Node) {
+  console.log(['commitDeletion'], { fiber, domParent });
+
   if (fiber.dom) {
     domParent.removeChild(fiber.dom);
   } else {
@@ -120,15 +165,17 @@ function commitDeletion(fiber, domParent) {
   }
 }
 
-function commitWork(fiber) {
+function commitWork(fiber: Fiber) {
+  fiber && console.log(['commitWork'], { fiber });
+
   if (!fiber) {
     return;
   }
 
-  let domParentFiber = fiber.return;
+  let domParentFiber = fiber.parent;
 
   while (!domParentFiber.dom) {
-    domParentFiber = domParentFiber.return;
+    domParentFiber = domParentFiber.parent;
   }
 
   const domParent = domParentFiber.dom;
@@ -146,13 +193,16 @@ function commitWork(fiber) {
 }
 
 function commitRoot() {
+  console.log(['commitRoot']);
   deletions.forEach(commitWork);
   commitWork(workInProgressRoot.child);
   workDone = workInProgressRoot;
   workInProgressRoot = null;
 }
 
-function reconcileChildren(fiber, elements) {
+function reconcileChildren(fiber: Fiber, elements: Element[]) {
+  console.log(['reconcileChildren'], { fiber, elements });
+
   let index = 0;
   let oldFiber = fiber.alternate && fiber.alternate.child;
   let prevSibling = null;
@@ -167,7 +217,7 @@ function reconcileChildren(fiber, elements) {
         type: oldFiber.type,
         props: element.props,
         dom: oldFiber.dom,
-        return: fiber,
+        parent: fiber,
         alternate: oldFiber,
         effectTag: 'UPDATE',
       };
@@ -178,7 +228,7 @@ function reconcileChildren(fiber, elements) {
         type: element.type,
         props: element.props,
         dom: null,
-        return: fiber,
+        parent: fiber,
         alternate: null,
         effectTag: 'PLACEMENT',
       };
@@ -204,17 +254,22 @@ function reconcileChildren(fiber, elements) {
   }
 }
 
-function renderClassComponent(Component, props) {
+function renderClassComponent(Component: any, props: any) {
+  console.log(['renderClassComponent'], { Component, props });
+
   const instance = new Component(props);
 
   return instance.render();
 }
 
-function shouldConstruct(Component) {
+function shouldConstruct(Component: any) {
+  console.log(['shouldConstruct'], { Component });
+
   return typeof Component === 'function' && Component.isReactComponent;
 }
 
-function updateFunctionComponent(fiber) {
+function updateFunctionComponent(fiber: Fiber) {
+  console.log(['updateFunctionComponent'], { fiber });
   workInProgress = fiber;
   hookIndex = 0;
   workInProgress.hooks = [];
@@ -226,7 +281,9 @@ function updateFunctionComponent(fiber) {
   reconcileChildren(fiber, elements);
 }
 
-function updateHostComponent(fiber) {
+function updateHostComponent(fiber: Fiber) {
+  console.log(['updateHostComponent'], { fiber });
+
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
@@ -234,7 +291,9 @@ function updateHostComponent(fiber) {
   reconcileChildren(fiber, fiber.props.children);
 }
 
-function useState(initial) {
+function useState<T>(initial: T) {
+  console.log(['useState'], { initial });
+
   const oldHook =
     workInProgress.alternate &&
     workInProgress.alternate.hooks &&
@@ -266,18 +325,41 @@ function useState(initial) {
   return [hook.state, setState];
 }
 
+const ReactNoopUpdateQueue = {
+  isMounted(publicInstance) {
+    return false;
+  },
+  enqueueForceUpdate(publicInstance, callback, callerName) {
+    throw new Error('component did not mount');
+  },
+  enqueueReplaceState(publicInstance, completeState, callback, callerName) {
+    throw new Error('component did not mount');
+  },
+  enqueueSetState(publicInstance, partialState, callback, callerName) {
+    throw new Error('component did not mount');
+  },
+};
+
 class Component {
   static isReactComponent = true;
 
   props;
   state;
+  refs;
+  context;
+  updater;
 
-  constructor(props) {
+  constructor(props, context, updater) {
     this.props = props;
+    this.context = context;
+    // If a component has string refs, we will assign a different object later.
+    this.refs = {};
+    // We initialize the default updater but the real one gets injected by the renderer.
+    this.updater = updater || ReactNoopUpdateQueue;
   }
 
   setState(statePartial) {
-    Object.assign(this.state, statePartial);
+    this.updater(statePartial);
   }
 
   render() {
@@ -286,6 +368,8 @@ class Component {
 }
 
 function performUnitOfWork(fiber) {
+  console.log(['performUnitOfWork'], { fiber });
+
   const isFunctionComponent = fiber.type instanceof Function;
 
   if (isFunctionComponent) {
@@ -305,12 +389,14 @@ function performUnitOfWork(fiber) {
       return nextFiber.sibling;
     }
 
-    nextFiber = nextFiber.return;
+    nextFiber = nextFiber.parent;
   }
 }
 
 function workLoop(deadline) {
   let shouldYield = false;
+
+  nextUnitOfWork && !shouldYield && console.log(['workLoop'], { deadline });
 
   while (nextUnitOfWork && !shouldYield) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
