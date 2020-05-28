@@ -4,8 +4,13 @@ let nextUnitOfWork: Fiber = null;
 let workDone: Fiber = null;
 let workInProgress: Fiber = null;
 let workInProgressRoot: Fiber = null;
-let deletions: any[] = null;
+let deletions: Fiber[] = null;
 let hookIndex: number | null = null;
+
+interface Hook {
+  state: unknown;
+  queue: Function[];
+}
 
 interface Element {
   $$typeof?: never;
@@ -26,7 +31,8 @@ interface Fiber {
   parent?: Fiber;
   child?: Fiber;
   sibling?: Fiber;
-  hooks?: any[];
+  hooks?: Hook[];
+  state?: Record<string, unknown>;
 }
 
 function render(element: Element, container: HTMLElement) {
@@ -43,7 +49,7 @@ function render(element: Element, container: HTMLElement) {
 }
 
 function createTextElement(text: unknown) {
-  console.log(['createTextElement'], { text });
+  console.log(['jsx -> Element | createTextElement'], { text });
 
   return {
     type: 'TEXT_ELEMENT',
@@ -59,7 +65,7 @@ function createElement(
   props: Record<string, unknown>,
   ...children: Element[]
 ) {
-  console.log(['createElement'], { type, props, children });
+  console.log(['jsx -> Element | createElement'], { type, props, children });
 
   return {
     $$typeof: Symbol('react.element'),
@@ -192,14 +198,22 @@ function commitWork(fiber: Fiber) {
   commitWork(fiber.sibling);
 }
 
+function removeNodes() {
+  console.log(['removeNode'], deletions.length);
+  deletions.forEach(commitWork);
+}
+
 function commitRoot() {
   console.log(['commitRoot']);
-  deletions.forEach(commitWork);
+  removeNodes();
+  console.log(['after deletions']);
   commitWork(workInProgressRoot.child);
+  console.log(['all work commited']);
   workDone = workInProgressRoot;
   workInProgressRoot = null;
 }
 
+// add to fiber `child` field
 function reconcileChildren(fiber: Fiber, elements: Element[]) {
   console.log(['reconcileChildren'], { fiber, elements });
 
@@ -254,10 +268,37 @@ function reconcileChildren(fiber: Fiber, elements: Element[]) {
   }
 }
 
-function renderClassComponent(Component: any, props: any) {
+function renderClassComponent(
+  Component: any,
+  props: Record<string, unknown>,
+  state: Record<string, unknown>,
+) {
   console.log(['renderClassComponent'], { Component, props });
 
-  const instance = new Component(props);
+  let queue = [];
+  let replace = false;
+  const updater = {
+    isMounted: function () {
+      return false;
+    },
+    enqueueForceUpdate: function () {
+      if (queue === null) {
+        return null;
+      }
+    },
+    enqueueReplaceState: function (publicInstance, completeState) {
+      replace = true;
+      queue = [completeState];
+    },
+    enqueueSetState: function (publicInstance, currentPartialState) {
+      if (queue === null) {
+        return null;
+      }
+
+      queue.push(currentPartialState);
+    },
+  };
+  const instance = new Component(props, state, updater);
 
   return instance.render();
 }
@@ -275,7 +316,7 @@ function updateFunctionComponent(fiber: Fiber) {
   workInProgress.hooks = [];
 
   const elements = shouldConstruct(fiber.type)
-    ? [renderClassComponent(fiber.type, fiber.props)]
+    ? [renderClassComponent(fiber.type, fiber.props, fiber.state)]
     : [fiber.type(fiber.props)];
 
   reconcileChildren(fiber, elements);
@@ -367,7 +408,7 @@ class Component {
   }
 }
 
-function performUnitOfWork(fiber) {
+function performUnitOfWork(fiber: Fiber): Fiber | undefined {
   console.log(['performUnitOfWork'], { fiber });
 
   const isFunctionComponent = fiber.type instanceof Function;
@@ -379,8 +420,12 @@ function performUnitOfWork(fiber) {
   }
 
   if (fiber.child) {
+    console.log(['performUnitOfWork.fiber.child'], fiber.child);
+
     return fiber.child;
   }
+
+  console.log(['performUnitOfWork.fiber.no-child'], fiber);
 
   let nextFiber = fiber;
 
@@ -393,10 +438,10 @@ function performUnitOfWork(fiber) {
   }
 }
 
-function workLoop(deadline) {
+function workLoop(deadline: IdleDeadline) {
   let shouldYield = false;
 
-  nextUnitOfWork && !shouldYield && console.log(['workLoop'], { deadline });
+  nextUnitOfWork && console.log(['workLoop'], { deadline, nextUnitOfWork });
 
   while (nextUnitOfWork && !shouldYield) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);

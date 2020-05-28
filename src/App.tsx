@@ -25,8 +25,12 @@ class ExtendedTestClassComponent extends TestClassComponent {
   }
 }
 
-function GrowingButton({ label }) {
+function GrowingButton({ label, visible }) {
   const [buttonSize, setButtonSize] = React.useState(10);
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <button
@@ -39,6 +43,7 @@ function GrowingButton({ label }) {
 }
 
 function App() {
+  const [count, setCount] = React.useState(0);
   const [visible, setVisible] = React.useState(true);
 
   function disappear() {
@@ -53,8 +58,16 @@ function App() {
     <div>
       <h1>My Own React App!</h1>
       <div>
-        <p>It's awesome!</p>
-        {visible && <GrowingButton label="Click it like it's hot!" />}
+        <div>
+          <span>{count.toString()}</span>
+          <button onClick={() => setCount((c) => c + 1)}>
+            increase counter
+          </button>
+          <button onClick={() => setCount((c) => c - 1)}>
+            decrease counter
+          </button>
+        </div>
+        <GrowingButton label="Click it like it's hot!" visible={visible} />
         <button onClick={visible ? disappear : appear}>{`${
           visible ? 'disappear' : 'appear'
         } now!`}</button>
