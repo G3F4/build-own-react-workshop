@@ -268,56 +268,13 @@ function reconcileChildren(fiber: Fiber, elements: Element[]) {
   }
 }
 
-function renderClassComponent(
-  Component: any,
-  props: Record<string, unknown>,
-  state: Record<string, unknown>,
-) {
-  console.log(['renderClassComponent'], { Component, props });
-
-  let queue = [];
-  let replace = false;
-  const updater = {
-    isMounted: function () {
-      return false;
-    },
-    enqueueForceUpdate: function () {
-      if (queue === null) {
-        return null;
-      }
-    },
-    enqueueReplaceState: function (publicInstance, completeState) {
-      replace = true;
-      queue = [completeState];
-    },
-    enqueueSetState: function (publicInstance, currentPartialState) {
-      if (queue === null) {
-        return null;
-      }
-
-      queue.push(currentPartialState);
-    },
-  };
-  const instance = new Component(props, state, updater);
-
-  return instance.render();
-}
-
-function shouldConstruct(Component: any) {
-  console.log(['shouldConstruct'], { Component });
-
-  return typeof Component === 'function' && Component.isReactComponent;
-}
-
 function updateFunctionComponent(fiber: Fiber) {
   console.log(['updateFunctionComponent'], { fiber });
   workInProgress = fiber;
   hookIndex = 0;
   workInProgress.hooks = [];
 
-  const elements = shouldConstruct(fiber.type)
-    ? [renderClassComponent(fiber.type, fiber.props, fiber.state)]
-    : [fiber.type(fiber.props)];
+  const elements = [fiber.type(fiber.props)];
 
   reconcileChildren(fiber, elements);
 }
@@ -364,48 +321,6 @@ function useState<T>(initial: T) {
   hookIndex++;
 
   return [hook.state, setState];
-}
-
-const ReactNoopUpdateQueue = {
-  isMounted(publicInstance) {
-    return false;
-  },
-  enqueueForceUpdate(publicInstance, callback, callerName) {
-    throw new Error('component did not mount');
-  },
-  enqueueReplaceState(publicInstance, completeState, callback, callerName) {
-    throw new Error('component did not mount');
-  },
-  enqueueSetState(publicInstance, partialState, callback, callerName) {
-    throw new Error('component did not mount');
-  },
-};
-
-class Component {
-  static isReactComponent = true;
-
-  props;
-  state;
-  refs;
-  context;
-  updater;
-
-  constructor(props, context, updater) {
-    this.props = props;
-    this.context = context;
-    // If a component has string refs, we will assign a different object later.
-    this.refs = {};
-    // We initialize the default updater but the real one gets injected by the renderer.
-    this.updater = updater || ReactNoopUpdateQueue;
-  }
-
-  setState(statePartial) {
-    this.updater(statePartial);
-  }
-
-  render() {
-    throw new Error('implement render method');
-  }
 }
 
 function performUnitOfWork(fiber: Fiber): Fiber | undefined {
@@ -458,7 +373,6 @@ function workLoop(deadline: IdleDeadline) {
 requestIdleCallback(workLoop);
 
 const OwnReact = {
-  Component,
   createElement,
   render,
   useState,
