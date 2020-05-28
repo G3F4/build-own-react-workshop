@@ -32,7 +32,6 @@ interface Fiber {
   child?: Fiber;
   sibling?: Fiber;
   hooks?: Hook[];
-  state?: Record<string, unknown>;
 }
 
 function render(element: Element, container: HTMLElement) {
@@ -354,13 +353,10 @@ function performUnitOfWork(fiber: Fiber): Fiber | undefined {
 }
 
 function workLoop(deadline: IdleDeadline) {
-  let shouldYield = false;
-
   nextUnitOfWork && console.log(['workLoop'], { deadline, nextUnitOfWork });
 
-  while (nextUnitOfWork && !shouldYield) {
+  while (nextUnitOfWork && deadline.timeRemaining() !== 0) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
-    shouldYield = deadline.timeRemaining() < 1;
   }
 
   if (!nextUnitOfWork && workInProgressRoot) {
