@@ -11,48 +11,21 @@ const UpdateState = 0;
 const ReplaceState = 1;
 const ForceUpdate = 2;
 const CaptureUpdate = 3;
-const NoEffect =
-  /*              */
-  0;
-const PerformedWork =
-  /*         */
-  1; // You can change the rest (and add more).
-const Placement =
-  /*             */
-  2;
-const Update =
-  /*                */
-  4;
-const PlacementAndUpdate =
-  /*    */
-  6;
-const Deletion =
-  /*              */
-  8;
-const ContentReset =
-  /*          */
-  16;
-const Callback =
-  /*              */
-  32;
-const DidCapture =
-  /*            */
-  64;
-const Ref =
-  /*                   */
-  128;
-const Hydrating =
-  /*             */
-  1024;
-const Incomplete =
-  /*            */
-  2048;
-const ShouldCapture =
-  /*         */
-  4096;
+const NoEffect = 0;
+const PerformedWork = 1;
+const Placement = 2;
+const Update = 4;
+const PlacementAndUpdate = 6;
+const Deletion = 8;
+const ContentReset = 16;
+const Callback = 32;
+const DidCapture = 64;
+const Ref = 128;
+const Incomplete = 2048;
+const ShouldCapture = 4096;
 const FunctionComponent = 0;
-const IndeterminateComponent = 2; // Before we know whether it is function or class
-const HostRoot = 3; // Root of a host tree. Could be nested inside another node.
+const IndeterminateComponent = 2;
+const HostRoot = 3;
 const HostComponent = 5;
 const HostText = 6;
 let currentlyRenderingFiber$1 = null;
@@ -62,24 +35,10 @@ const Namespaces = {
   svg: SVG_NAMESPACE,
 };
 const HTML_NAMESPACE$1 = Namespaces.html;
-/**
- * Keeps track of the current owner.
- *
- * The current owner is the component who should own any components that are
- * currently being constructed.
- */
 const ReactCurrentOwner = {
-  /**
-   * @internal
-   * @type {ReactComponent}
-   */
   current: null,
 };
 const ReactCurrentDispatcher = {
-  /**
-   * @internal
-   * @type {ReactComponent}
-   */
   current: null,
 };
 let currentHook = null;
@@ -101,20 +60,16 @@ const ReactElement = function (type, props) {
   console.log(['ReactElement'], { type, props });
 
   return {
-    // This tag allows us to uniquely identify this as a React Element
     $$typeof: REACT_ELEMENT_TYPE,
-    // Built-in properties that belong on the element
     type: type,
     props: props,
   };
 };
-/**
- * Create and return a new ReactElement of the given type.
- * See https://reactjs.org/docs/react-api.html#createelement
- */
 
 function createElement(type, config, children) {
-  let propName; // Reserved names are extracted
+  console.log(['createElement'], { type, config, children });
+
+  let propName;
   const props = {};
 
   if (config != null) {
@@ -141,7 +96,7 @@ function createElement(type, config, children) {
 }
 
 function FiberNode(tag, pendingProps, key) {
-  // Instance
+  console.log(['FiberNode'], { tag, pendingProps, key });
   this.tag = tag;
   this.key = key;
   this.elementType = null;
@@ -165,6 +120,8 @@ function FiberNode(tag, pendingProps, key) {
 }
 
 const createFiber = function (tag, pendingProps, key) {
+  console.log(['createFiber'], { tag, pendingProps, key });
+
   return new FiberNode(tag, pendingProps, key);
 };
 const LegacyRoot = 0;
@@ -178,10 +135,13 @@ function FiberRootNode(containerInfo) {
 }
 
 function createHostRootFiber() {
+  console.log(['createHostRootFiber']);
+
   return createFiber(HostRoot, null, null);
 }
 
 function initializeUpdateQueue(fiber) {
+  console.log(['initializeUpdateQueue'], { fiber });
   fiber.updateQueue = {
     baseState: fiber.memoizedState,
     baseQueue: null,
@@ -193,17 +153,14 @@ function initializeUpdateQueue(fiber) {
 }
 
 function createFiberRoot(containerInfo) {
-  console.log(['createFiberRoot'], containerInfo);
+  console.log(['createFiberRoot'], { containerInfo });
 
   const root = new FiberRootNode(containerInfo);
-  // stateNode is any.
   const uninitializedFiber = createHostRootFiber();
 
   root.current = uninitializedFiber;
   uninitializedFiber.stateNode = root;
   initializeUpdateQueue(uninitializedFiber);
-
-  console.log(['createFiberRoot, root'], root);
 
   return root;
 }
@@ -277,20 +234,10 @@ let syncQueue = null;
 
 function scheduleSyncCallback(callback) {
   console.log(['scheduleSyncCallback'], { callback });
-  // Push this callback into an internal queue. We'll flush these either in
-  // the next tick, or earlier if something calls `flushSyncCallbackQueue`.
-  console.log(['scheduleSyncCallback.syncQueue === null'], syncQueue === null);
 
   if (syncQueue === null) {
-    syncQueue = [callback]; // Flush the queue in the next tick, at the earliest.
-
-    // immediateQueueCallbackNode = Scheduler_scheduleCallback(
-    //   Scheduler_ImmediatePriority,
-    //   flushSyncCallbackQueueImpl,
-    // );
+    syncQueue = [callback];
   } else {
-    // Push onto existing queue. Don't need to schedule a callback because
-    // we already scheduled one when we created the queue.
     syncQueue.push(callback);
   }
 }
@@ -304,11 +251,6 @@ function createWorkInProgress(current, pendingProps) {
   let workInProgress = current.alternate;
 
   if (workInProgress === null) {
-    // We use a double buffering pooling technique because we know that we'll
-    // only ever need at most two versions of a tree. We pool the "other" unused
-    // node that we're free to reuse. This is lazily created to avoid allocating
-    // extra objects for things that are never updated. It also allow us to
-    // reclaim the extra memory if needed.
     workInProgress = createFiber(current.tag, pendingProps, current.key);
     workInProgress.elementType = current.elementType;
     workInProgress.type = current.type;
@@ -316,9 +258,8 @@ function createWorkInProgress(current, pendingProps) {
     workInProgress.alternate = current;
     current.alternate = workInProgress;
   } else {
-    workInProgress.pendingProps = pendingProps; // We already have an alternate.
-    // Reset the effect tag.
-    workInProgress.effectTag = NoEffect; // The effect list is no longer valid.
+    workInProgress.pendingProps = pendingProps;
+    workInProgress.effectTag = NoEffect;
     workInProgress.nextEffect = null;
     workInProgress.firstEffect = null;
     workInProgress.lastEffect = null;
@@ -332,7 +273,7 @@ function createWorkInProgress(current, pendingProps) {
   workInProgress.index = current.index;
 
   return workInProgress;
-} // Used to reuse a Fiber for a second pass.
+}
 
 function prepareFreshStack(root) {
   console.log(['prepareFreshStack'], { root });
@@ -347,6 +288,7 @@ const fiberStack = [];
 let index = -1;
 
 function pop(cursor) {
+  console.log(['pop'], { cursor });
   cursor.current = valueStack[index];
   valueStack[index] = null;
 
@@ -358,6 +300,7 @@ function pop(cursor) {
 }
 
 function push(cursor, value, fiber) {
+  console.log(['push'], { cursor, value, fiber });
   index++;
   valueStack[index] = cursor.current;
 
@@ -369,6 +312,8 @@ function push(cursor, value, fiber) {
 }
 
 function getIntrinsicNamespace(type) {
+  console.log(['getIntrinsicNamespace'], { type });
+
   switch (type) {
     case 'svg':
       return SVG_NAMESPACE;
@@ -382,20 +327,22 @@ function getIntrinsicNamespace(type) {
 const contextStackCursor$1 = createCursor(NO_CONTEXT);
 
 function getChildNamespace(parentNamespace, type) {
+  console.log(['getChildNamespace'], { parentNamespace, type });
+
   if (parentNamespace == null || parentNamespace === HTML_NAMESPACE) {
-    // No (or default) parent namespace: potential entry point.
     return getIntrinsicNamespace(type);
   }
 
   if (parentNamespace === SVG_NAMESPACE && type === 'foreignObject') {
-    // We're leaving SVG.
     return HTML_NAMESPACE;
-  } // By default, pass namespace below.
+  }
 
   return parentNamespace;
 }
 
 function getRootHostContext(rootContainerInstance) {
+  console.log(['getRootHostContext'], { rootContainerInstance });
+
   let type;
   let namespace;
   const nodeType = rootContainerInstance.nodeType;
@@ -432,18 +379,18 @@ function getRootHostContext(rootContainerInstance) {
 }
 
 function pushHostContainer(fiber, nextRootInstance) {
-  // Push current root instance onto the stack;
-  // This allows us to reset root when portals are popped.
-  push(rootInstanceStackCursor, nextRootInstance, fiber); // Track the context and the Fiber that provided it.
+  console.log(['pushHostContainer'], { fiber, nextRootInstance });
+  push(rootInstanceStackCursor, nextRootInstance, fiber);
 
-  const nextRootContext = getRootHostContext(nextRootInstance); // Now that we know this function doesn't throw, replace it.
+  const nextRootContext = getRootHostContext(nextRootInstance);
 
   pop(contextStackCursor$1, fiber);
   push(contextStackCursor$1, nextRootContext, fiber);
 }
 
 function cloneUpdateQueue(current, workInProgress) {
-  // Clone the update queue from current. Unless it's already a clone.
+  console.log(['getStateFromUpdate'], { current, workInProgress });
+
   const queue = workInProgress.updateQueue;
   const currentQueue = current.updateQueue;
 
@@ -469,14 +416,20 @@ function getStateFromUpdate(
   nextProps,
   instance,
 ) {
-  console.log(['getStateFromUpdate']);
+  console.log(['getStateFromUpdate'], {
+    workInProgress,
+    queue,
+    update,
+    prevState,
+    nextProps,
+    instance,
+  });
 
   switch (update.tag) {
     case ReplaceState: {
       const payload = update.payload;
 
       if (typeof payload === 'function') {
-        // Updater function
         {
           if (workInProgress.mode) {
             payload.call(instance, prevState, nextProps);
@@ -486,7 +439,7 @@ function getStateFromUpdate(
         const nextState = payload.call(instance, prevState, nextProps);
 
         return nextState;
-      } // State object
+      }
 
       return payload;
     }
@@ -494,13 +447,11 @@ function getStateFromUpdate(
       workInProgress.effectTag =
         (workInProgress.effectTag & ~ShouldCapture) | DidCapture;
     }
-    // Intentional fallthrough
     case UpdateState: {
       const _payload = update.payload;
       let partialState;
 
       if (typeof _payload === 'function') {
-        // Updater function
         {
           if (workInProgress.mode) {
             _payload.call(instance, prevState, nextProps);
@@ -509,14 +460,12 @@ function getStateFromUpdate(
 
         partialState = _payload.call(instance, prevState, nextProps);
       } else {
-        // Partial state object
         partialState = _payload;
       }
 
       if (partialState === null || partialState === undefined) {
-        // Null and undefined are treated as no-ops.
         return prevState;
-      } // Merge the partial state and the previous state.
+      }
 
       return Object.assign({}, prevState, partialState);
     }
@@ -533,19 +482,17 @@ function getStateFromUpdate(
 let currentlyProcessingQueue;
 
 function processUpdateQueue(workInProgress, props, instance) {
-  // This is always non-null on a ClassComponent or HostRoot
+  console.log(['processUpdateQueue'], { workInProgress, props, instance });
+
   const queue = workInProgress.updateQueue;
 
   hasForceUpdate = false;
 
-  let baseQueue = queue.baseQueue; // The last pending update that hasn't been processed yet.
+  let baseQueue = queue.baseQueue;
   let pendingQueue = queue.shared.pending;
 
   if (pendingQueue !== null) {
-    // We have new updates that haven't been processed yet.
-    // We'll add them to the base queue.
     if (baseQueue !== null) {
-      // Merge the pending queue and the base queue.
       const baseFirst = baseQueue.next;
       const pendingFirst = pendingQueue.next;
 
@@ -554,7 +501,7 @@ function processUpdateQueue(workInProgress, props, instance) {
     }
 
     baseQueue = pendingQueue;
-    queue.shared.pending = null; // TODO: Pass `current` as argument
+    queue.shared.pending = null;
 
     const current = workInProgress.alternate;
 
@@ -565,10 +512,10 @@ function processUpdateQueue(workInProgress, props, instance) {
         currentQueue.baseQueue = pendingQueue;
       }
     }
-  } // These values may change as we process the queue.
+  }
 
   if (baseQueue !== null) {
-    const first = baseQueue.next; // Iterate through the list of updates to compute the result.
+    const first = baseQueue.next;
     let newState = queue.baseState;
     let newBaseState = null;
     let newBaseQueueFirst = null;
@@ -581,9 +528,6 @@ function processUpdateQueue(workInProgress, props, instance) {
         const updateExpirationTime = update.expirationTime;
 
         if (updateExpirationTime < 123123123) {
-          // Priority is insufficient. Skip this update. If this is the first
-          // skipped update, the previous update/state is the new base
-          // update/state.
           const clone = {
             expirationTime: update.expirationTime,
             suspenseConfig: update.suspenseConfig,
@@ -598,9 +542,8 @@ function processUpdateQueue(workInProgress, props, instance) {
             newBaseState = newState;
           } else {
             newBaseQueueLast = newBaseQueueLast.next = clone;
-          } // Update the remaining priority in the queue.
+          }
         } else {
-          // This update does have sufficient priority.
           if (newBaseQueueLast !== null) {
             const _clone = {
               tag: update.tag,
@@ -610,12 +553,7 @@ function processUpdateQueue(workInProgress, props, instance) {
             };
 
             newBaseQueueLast = newBaseQueueLast.next = _clone;
-          } // Mark the event time of this update as relevant to this render pass.
-          // TODO: This should ideally use the true event time of this update rather than
-          // its priority which is a derived and not reverseable value.
-          // TODO: We should skip this update if it was already committed but currently
-          // we have no way of detecting the difference between a committed and suspended
-          // update here.
+          }
 
           newState = getStateFromUpdate(
             workInProgress,
@@ -649,8 +587,6 @@ function processUpdateQueue(workInProgress, props, instance) {
           if (pendingQueue === null) {
             break;
           } else {
-            // An update was scheduled from inside a reducer. Add the new
-            // pending updates to the end of the list and keep processing.
             update = baseQueue.next = pendingQueue.next;
             pendingQueue.next = first;
             queue.baseQueue = baseQueue = pendingQueue;
@@ -667,14 +603,7 @@ function processUpdateQueue(workInProgress, props, instance) {
     }
 
     queue.baseState = newBaseState;
-    queue.baseQueue = newBaseQueueLast; // Set the remaining expiration time to be whatever is remaining in the queue.
-    // This should be fine because the only two other things that contribute to
-    // expiration time are props and context. We're already in the middle of the
-    // begin phase by the time we start processing the queue, so we've already
-    // dealt with the props. Context in components that specify
-    // shouldComponentUpdate is tricky; but we'll have to account for
-    // that regardless.
-
+    queue.baseQueue = newBaseQueueLast;
     workInProgress.memoizedState = newState;
   }
 
@@ -694,17 +623,8 @@ function reconcileChildren(current, workInProgress, nextChildren) {
   });
 
   if (current === null) {
-    // If this is a fresh new component that hasn't been rendered yet, we
-    // won't update its child set by applying minimal side-effects. Instead,
-    // we will add them all to the child before it gets rendered. That means
-    // we can optimize this reconciliation pass by not tracking side-effects.
     workInProgress.child = mountChildFibers(workInProgress, null, nextChildren);
   } else {
-    // If the current child is the same as the work in progress, it means that
-    // we haven't yet started any work on these children. Therefore, we use
-    // the clone algorithm to create a copy of all the current children.
-    // If we had any progressed work already, that is invalid at this point so
-    // let's throw it out.
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -725,8 +645,7 @@ function updateHostRoot(current, workInProgress) {
   cloneUpdateQueue(current, workInProgress);
   processUpdateQueue(workInProgress, nextProps, null);
 
-  const nextState = workInProgress.memoizedState; // Caution: React DevTools currently depends on this property
-  // being called "element".
+  const nextState = workInProgress.memoizedState;
   const nextChildren = nextState.element;
 
   reconcileChildren(current, workInProgress, nextChildren);
@@ -737,6 +656,8 @@ function updateHostRoot(current, workInProgress) {
 let isRendering = false;
 
 function mountWorkInProgressHook() {
+  console.log(['mountWorkInProgressHook']);
+
   const hook = {
     memoizedState: null,
     baseState: null,
@@ -746,11 +667,8 @@ function mountWorkInProgressHook() {
   };
 
   if (workInProgressHook === null) {
-    // This is the first hook in the list
-
     currentlyRenderingFiber$1.memoizedState = workInProgressHook = hook;
   } else {
-    // Append to the end of the list
     workInProgressHook = workInProgressHook.next = hook;
   }
 
@@ -769,7 +687,6 @@ function dispatchAction(fiber, queue, action) {
   const pending = queue.pending;
 
   if (pending === null) {
-    // This is the first update. Create a circular list.
     update.next = update;
   } else {
     update.next = pending.next;
@@ -795,10 +712,11 @@ function dispatchAction(fiber, queue, action) {
 }
 
 function mountState(initialState) {
+  console.log(['mountState.useState'], { initialState });
+
   const hook = mountWorkInProgressHook();
 
   if (typeof initialState === 'function') {
-    // $FlowFixMe: Flow doesn't like mixed types
     initialState = initialState();
   }
 
@@ -822,6 +740,7 @@ function mountState(initialState) {
 {
   HooksDispatcherOnMountInDEV = {
     useState: function (initialState) {
+      console.log(['HooksDispatcherOnMountInDEV.useState'], { initialState });
       currentHookNameInDev = 'useState';
 
       const prevDispatcher = ReactCurrentDispatcher.current;
@@ -837,6 +756,7 @@ function mountState(initialState) {
   };
   HooksDispatcherOnUpdateInDEV = {
     useState: function (initialState) {
+      console.log(['HooksDispatcherOnUpdateInDEV.useState'], { initialState });
       currentHookNameInDev = 'useState';
 
       const prevDispatcher = ReactCurrentDispatcher.current;
@@ -853,11 +773,8 @@ function mountState(initialState) {
 }
 
 function updateWorkInProgressHook() {
-  // This function is used both for updates and for re-renders triggered by a
-  // render phase update. It assumes there is either a current hook we can
-  // clone, or a work-in-progress hook from a previous render pass that we can
-  // use as a base. When we reach the end of the base list, we must switch to
-  // the dispatcher used for mounts.
+  console.log(['updateWorkInProgressHook']);
+
   let nextCurrentHook;
 
   if (currentHook === null) {
@@ -881,11 +798,9 @@ function updateWorkInProgressHook() {
   }
 
   if (nextWorkInProgressHook !== null) {
-    // There's already a work-in-progress. Reuse it.
     workInProgressHook = nextWorkInProgressHook;
     currentHook = nextCurrentHook;
   } else {
-    // Clone from the current hook.
     currentHook = nextCurrentHook;
 
     const newHook = {
@@ -897,11 +812,8 @@ function updateWorkInProgressHook() {
     };
 
     if (workInProgressHook === null) {
-      // This is the first hook in the list.
-
       currentlyRenderingFiber$1.memoizedState = workInProgressHook = newHook;
     } else {
-      // Append to the end of the list.
       workInProgressHook = workInProgressHook.next = newHook;
     }
   }
@@ -910,13 +822,15 @@ function updateWorkInProgressHook() {
 }
 
 function updateReducer(reducer) {
+  console.log(['updateReducer'], { reducer });
+
   const hook = updateWorkInProgressHook();
   const queue = hook.queue;
 
   queue.lastRenderedReducer = reducer;
 
-  const current = currentHook; // The last rebase update that is NOT part of the base state.
-  let baseQueue = current.baseQueue; // The last pending update that hasn't been processed yet.
+  const current = currentHook;
+  let baseQueue = current.baseQueue;
   const pendingQueue = queue.pending;
 
   if (pendingQueue !== null) {
@@ -970,12 +884,6 @@ function renderWithHooks(current, workInProgress, Component, props, secondArg) {
 
   workInProgress.memoizedState = null;
   workInProgress.updateQueue = null;
-  // TODO Warn if no hooks are used at all during mount, then some are used during update.
-  // Currently we will identify the update render as a mount because memoizedState === null.
-  // This is tricky because it's valid for certain types of components (e.g. React.lazy)
-  // Using memoizedState to differentiate between mount/update only works if at least one stateful hook is used.
-  // Non-stateful hooks (e.g. context) don't get added to memoizedState,
-  // so memoizedState would be null during updates and mounts.
 
   {
     if (current !== null && current.memoizedState !== null) {
@@ -1015,7 +923,6 @@ function mountIndeterminateComponent(_current, workInProgress, Component) {
     value = renderWithHooks(null, workInProgress, Component, props, {});
   }
 
-  // Proceed under the assumption that this is a function component
   workInProgress.tag = FunctionComponent;
 
   reconcileChildren(null, workInProgress, value);
@@ -1033,9 +940,11 @@ function updateHostComponent(current, workInProgress) {
 
   return workInProgress.child;
 }
+
 function resolveDefaultProps(Component, baseProps) {
+  console.log(['resolveDefaultProps'], { Component, baseProps });
+
   if (Component && Component.defaultProps) {
-    // Resolve default props. Taken from ReactElement
     const props = Object.assign({}, baseProps);
     const defaultProps = Component.defaultProps;
 
@@ -1050,16 +959,20 @@ function resolveDefaultProps(Component, baseProps) {
 
   return baseProps;
 }
+
 function updateFunctionComponent(
   current,
   workInProgress,
   Component,
   nextProps,
 ) {
-  console.log(['updateFunctionComponent'], { current,
+  console.log(['updateFunctionComponent'], {
+    current,
     workInProgress,
     Component,
-    nextProps })
+    nextProps,
+  });
+
   let nextChildren;
 
   {
@@ -1074,14 +987,11 @@ function updateFunctionComponent(
   }
 
   workInProgress.effectTag |= PerformedWork;
-  reconcileChildren(
-    current,
-    workInProgress,
-    nextChildren,
-  );
+  reconcileChildren(current, workInProgress, nextChildren);
 
   return workInProgress.child;
 }
+
 function beginWork(current, workInProgress) {
   console.log(['beginWork'], { current, workInProgress });
 
@@ -1130,6 +1040,7 @@ const internalInstanceKey = '__reactInternalInstance$' + randomKey;
 const internalEventHandlersKey = '__reactEventHandlers$' + randomKey;
 
 function precacheFiberNode(hostInst, node) {
+  console.log(['precacheFiberNode'], { hostInst, node });
   node[internalInstanceKey] = hostInst;
 }
 
@@ -1139,6 +1050,8 @@ function updateFiberProps(node, props) {
 }
 
 function getOwnerDocumentFromRootContainer(rootContainerElement) {
+  console.log(['getOwnerDocumentFromRootContainer'], { rootContainerElement });
+
   return rootContainerElement.nodeType === DOCUMENT_NODE
     ? rootContainerElement
     : rootContainerElement.ownerDocument;
@@ -1151,6 +1064,14 @@ function createInstance(
   hostContext,
   internalInstanceHandle,
 ) {
+  console.log(['createInstance'], {
+    type,
+    props,
+    rootContainerInstance,
+    hostContext,
+    internalInstanceHandle,
+  });
+
   function createElement(type, props, rootContainerElement, parentNamespace) {
     const ownerDocument = getOwnerDocumentFromRootContainer(
       rootContainerElement,
@@ -1168,17 +1089,7 @@ function createInstance(
           is: props.is,
         });
       } else {
-        // Separate else branch instead of using `props.is || undefined` above because of a Firefox bug.
-        // See discussion in https://github.com/facebook/react/pull/6896
-        // and discussion in https://bugzilla.mozilla.org/show_bug.cgi?id=1276240
-        domElement = ownerDocument.createElement(type); // Normally attributes are assigned in `setInitialDOMProperties`, however the `multiple` and `size`
-        // attributes on `select`s needs to be added before `option`s are inserted.
-        // This prevents:
-        // - a bug where the `select` does not scroll to the correct option because singular
-        //  `select` elements automatically pick the first item #13222
-        // - a bug where the `select` set the first item as selected despite the `size` attribute #14239
-        // See https://github.com/facebook/react/issues/13222
-        // and https://github.com/facebook/react/issues/14239
+        domElement = ownerDocument.createElement(type);
 
         if (type === 'select') {
           const node = domElement;
@@ -1186,10 +1097,6 @@ function createInstance(
           if (props.multiple) {
             node.multiple = true;
           } else if (props.size) {
-            // Setting a size greater than 1 causes a select to behave like `multiple=true`, where
-            // it is possible that no option is selected.
-            //
-            // This is only necessary when a select in "single selection mode".
             node.size = props.size;
           }
         }
@@ -1204,7 +1111,6 @@ function createInstance(
   let parentNamespace;
 
   {
-    // TODO: take namespace into account when validating.
     const hostContextDev = hostContext;
 
     parentNamespace = hostContextDev.namespace;
@@ -1224,6 +1130,8 @@ function createInstance(
 }
 
 function createCursor(defaultValue) {
+  console.log(['createCursor'], { defaultValue });
+
   return {
     current: defaultValue,
   };
@@ -1232,43 +1140,16 @@ function createCursor(defaultValue) {
 const rootInstanceStackCursor = createCursor(NO_CONTEXT);
 
 function appendInitialChild(parentInstance, child) {
+  console.log(['appendInitialChild'], { parentInstance, child });
   parentInstance.appendChild(child);
 }
 
-// function prepareUpdate(
-//   domElement,
-//   type,
-//   oldProps,
-//   newProps,
-//   rootContainerInstance,
-// ) {
-//   return diffProperties(
-//     domElement,
-//     type,
-//     oldProps,
-//     newProps,
-//     rootContainerInstance,
-//   );
-// }
-
 function getRootHostContainer() {
+  console.log(['getRootHostContainer']);
+
   return rootInstanceStackCursor.current;
 }
 
-function getHostProps(element, props) {
-  const node = element;
-  const checked = props.checked;
-  const hostProps = Object.assign({}, props, {
-    defaultChecked: undefined,
-    defaultValue: undefined,
-    value: undefined,
-    checked: checked != null ? checked : node._wrapperState.initialChecked,
-  });
-
-  return hostProps;
-}
-
-// Calculate the diff between the two objects.
 function diffProperties(
   domElement,
   tag,
@@ -1276,6 +1157,14 @@ function diffProperties(
   nextRawProps,
   rootContainerElement,
 ) {
+  console.log(['diffProperties'], {
+    domElement,
+    tag,
+    lastRawProps,
+    nextRawProps,
+    rootContainerElement,
+  });
+
   let updatePayload = null;
   let lastProps;
   let nextProps;
@@ -1313,11 +1202,8 @@ function diffProperties(
           styleUpdates[styleName] = '';
         }
       }
-    }
-    else if (propKey === AUTOFOCUS);
+    } else if (propKey === AUTOFOCUS);
     else {
-      // For all other deleted properties we add it to the queue. We use
-      // the whitelist in the commit phase instead.
       (updatePayload = updatePayload || []).push(propKey, null);
     }
   }
@@ -1337,14 +1223,11 @@ function diffProperties(
     if (propKey === STYLE) {
       {
         if (nextProp) {
-          // Freeze the next style object so that we can assume it won't be
-          // mutated. We have already warned for this in the past.
           Object.freeze(nextProp);
         }
       }
 
       if (lastProp) {
-        // Unset styles on `lastProp` but not on `nextProp`.
         for (styleName in lastProp) {
           if (
             lastProp.hasOwnProperty(styleName) &&
@@ -1356,7 +1239,7 @@ function diffProperties(
 
             styleUpdates[styleName] = '';
           }
-        } // Update styles that changed since `lastProp`.
+        }
 
         for (styleName in nextProp) {
           if (
@@ -1371,7 +1254,6 @@ function diffProperties(
           }
         }
       } else {
-        // Relies on `updateStylesByID` not mutating `styleUpdates`.
         if (!styleUpdates) {
           if (!updatePayload) {
             updatePayload = [];
@@ -1398,22 +1280,15 @@ function diffProperties(
       ) {
         (updatePayload = updatePayload || []).push(propKey, '' + nextProp);
       }
-    }
-    else if (registrationNameModules.hasOwnProperty(propKey)) {
+    } else if (registrationNameModules.hasOwnProperty(propKey)) {
       if (nextProp != null) {
-
         ensureListeningTo(rootContainerElement, propKey);
       }
 
       if (!updatePayload && lastProp !== nextProp) {
-        // This is a special case. If any listener updates we need to ensure
-        // that the "current" props pointer gets updated so we need a commit
-        // to update this element.
         updatePayload = [];
       }
     } else {
-      // For any other property we always add it to the queue and then we
-      // filter it out using the whitelist during the commit.
       (updatePayload = updatePayload || []).push(propKey, nextProp);
     }
   }
@@ -1432,6 +1307,14 @@ function prepareUpdate(
   newProps,
   rootContainerInstance,
 ) {
+  console.log(['prepareUpdate'], {
+    domElement,
+    type,
+    oldProps,
+    newProps,
+    rootContainerInstance,
+  });
+
   return diffProperties(
     domElement,
     type,
@@ -1441,15 +1324,13 @@ function prepareUpdate(
   );
 }
 
-
 let appendAllChildren;
 let updateHostComponent$1;
 
 {
-  // Mutation mode
   appendAllChildren = function (parent, workInProgress) {
-    // We only have the top Fiber that was created but we need recurse down its
-    // children to find all the terminal nodes.
+    console.log(['appendAllChildren'], { parent, workInProgress });
+
     let node = workInProgress.child;
 
     while (node !== null) {
@@ -1486,18 +1367,19 @@ let updateHostComponent$1;
     newProps,
     rootContainerInstance,
   ) {
-    // If we have an alternate, that means this is an update and we need to
-    // schedule a side-effect to do the updates.
+    console.log(['updateHostComponent$1'], {
+      current,
+      workInProgress,
+      type,
+      newProps,
+      rootContainerInstance,
+    });
+
     const oldProps = current.memoizedProps;
 
     if (oldProps === newProps) {
-      // In mutation mode, this is sufficient for a bailout because
-      // we won't touch this node even if children changed.
       return;
-    } // If we get updated because one of our children updated, we don't
-    // have newProps so we'll have to reuse them.
-    // TODO: Split the update API as separate for the props vs. children.
-    // Even better would be if children weren't special cased at all tho.
+    }
 
     const instance = workInProgress.stateNode;
     const updatePayload = prepareUpdate(
@@ -1506,10 +1388,9 @@ let updateHostComponent$1;
       oldProps,
       newProps,
       rootContainerInstance,
-    ); // TODO: Type this specific to this type of component.
+    );
 
-    workInProgress.updateQueue = updatePayload; // If the update payload indicates that there is a change or if there
-    // is a new ref we mark this as an update. All the work is done in commitWork.
+    workInProgress.updateQueue = updatePayload;
 
     if (updatePayload) {
       markUpdate(workInProgress);
@@ -1518,40 +1399,28 @@ let updateHostComponent$1;
 }
 
 function isCustomComponent(tagName, props) {
+  console.log(['isCustomComponent'], { tagName, props });
+
   if (tagName.indexOf('-') === -1) {
     return typeof props.is === 'string';
   }
 
-  switch (tagName) {
-    // These are reserved SVG and MathML elements.
-    // We don't mind this whitelist too much because we expect it to never grow.
-    // The alternative is to track the namespace in a few places which is convoluted.
-    // https://w3c.github.io/webcomponents/spec/custom/#custom-elements-core-concepts
-    case 'annotation-xml':
-    case 'color-profile':
-    case 'font-face':
-    case 'font-face-src':
-    case 'font-face-uri':
-    case 'font-face-format':
-    case 'font-face-name':
-    case 'missing-glyph':
-      return false;
-    default:
-      return true;
-  }
+  return true;
 }
 
 const PossiblyWeakMap = typeof WeakMap === 'function' ? WeakMap : Map; // prettier-ignore
 const elementListenerMap = new PossiblyWeakMap();
 
 function publishRegistrationName(registrationName, pluginModule, eventName) {
-  console.log(['publishRegistrationName'])
+  console.log(['publishRegistrationName']);
   registrationNameModules[registrationName] = pluginModule;
   registrationNameDependencies[registrationName] =
     pluginModule.eventTypes[eventName].dependencies;
 }
 
 function getListenerMapForElement(element) {
+  console.log(['getListenerMapForElement'], { element });
+
   let listenerMap = elementListenerMap.get(element);
 
   if (listenerMap === undefined) {
@@ -1561,14 +1430,23 @@ function getListenerMapForElement(element) {
 
   return listenerMap;
 }
+
 const PLUGIN_EVENT_SYSTEM = 1;
 var registrationNameDependencies = {};
+
 function getTopLevelCallbackBookKeeping(
   topLevelType,
   nativeEvent,
   targetInst,
   eventSystemFlags,
 ) {
+  console.log(['getTopLevelCallbackBookKeeping'], {
+    topLevelType,
+    nativeEvent,
+    targetInst,
+    eventSystemFlags,
+  });
+
   return {
     topLevelType: topLevelType,
     eventSystemFlags: eventSystemFlags,
@@ -1577,9 +1455,12 @@ function getTopLevelCallbackBookKeeping(
     ancestors: [],
   };
 }
+
 const CALLBACK_BOOKKEEPING_POOL_SIZE = 10;
 const callbackBookkeepingPool = [];
+
 function releaseTopLevelCallbackBookKeeping(instance) {
+  console.log(['releaseTopLevelCallbackBookKeeping'], { instance });
   instance.topLevelType = null;
   instance.nativeEvent = null;
   instance.targetInst = null;
@@ -1589,16 +1470,19 @@ function releaseTopLevelCallbackBookKeeping(instance) {
     callbackBookkeepingPool.push(instance);
   }
 }
+
 let isBatchingEventUpdates = false;
 const batchedUpdatesImpl = function (fn, bookkeeping) {
+  console.log(['batchedUpdatesImpl'], { fn, bookkeeping });
+
   return fn(bookkeeping);
 };
 const batchedEventUpdatesImpl = batchedUpdatesImpl;
 
 function batchedEventUpdates(fn, a, b) {
+  console.log(['batchedEventUpdates'], { fn, a, b });
+
   if (isBatchingEventUpdates) {
-    // If we are currently inside another batch, we need to wait until it
-    // fully completes before restoring state.
     return fn(a, b);
   }
 
@@ -1610,39 +1494,37 @@ function batchedEventUpdates(fn, a, b) {
     isBatchingEventUpdates = false;
   }
 }
+
 function findRootContainerNode(inst) {
+  console.log(['findRootContainerNode'], { inst });
+
   if (inst.tag === HostRoot) {
     return inst.stateNode.containerInfo;
-  } // TODO: It may be a good idea to cache this to prevent unnecessary DOM
-  // traversal, but caching is difficult to do correctly without using a
-  // mutation observer to listen for all DOM changes.
+  }
 
   while (inst.return) {
     inst = inst.return;
   }
 
   if (inst.tag !== HostRoot) {
-    // This can happen if we're in a detached tree.
     return null;
   }
 
   return inst.stateNode.containerInfo;
 }
+
 const IS_FIRST_ANCESTOR = 1 << 6;
+
 function executeDispatch(event, listener, inst) {
+  console.log(['executeDispatch'], { event, listener, inst });
   event.currentTarget = getNodeFromInstance(inst);
-  listener(undefined, event)
+  listener(undefined, event);
   event.currentTarget = null;
 }
-/**
- * Allows registered plugins an opportunity to extract events from top-level
- * native browser events.
- *
- * @return {*} An accumulation of synthetic events.
- * @internal
- */
+
 function executeDispatchesInOrder(event) {
-  console.log(['executeDispatchesInOrder'], { event })
+  console.log(['executeDispatchesInOrder'], { event });
+
   const dispatchListeners = event._dispatchListeners;
   const dispatchInstances = event._dispatchInstances;
 
@@ -1650,7 +1532,7 @@ function executeDispatchesInOrder(event) {
     for (let i = 0; i < dispatchListeners.length; i++) {
       if (event.isPropagationStopped()) {
         break;
-      } // Listeners and Instances are two parallel arrays that are always in sync.
+      }
 
       executeDispatch(event, dispatchListeners[i], dispatchInstances[i]);
     }
@@ -1661,8 +1543,10 @@ function executeDispatchesInOrder(event) {
   event._dispatchListeners = null;
   event._dispatchInstances = null;
 }
+
 const executeDispatchesAndRelease = function (event) {
-  console.log(['executeDispatchesAndRelease'], { executeDispatchesAndRelease })
+  console.log(['executeDispatchesAndRelease'], { executeDispatchesAndRelease });
+
   if (event) {
     executeDispatchesInOrder(event);
 
@@ -1670,15 +1554,17 @@ const executeDispatchesAndRelease = function (event) {
   }
 };
 const executeDispatchesAndReleaseTopLevel = function (e) {
-  console.log(['executeDispatchesAndReleaseTopLevel'], { e })
+  console.log(['executeDispatchesAndReleaseTopLevel'], { e });
+
   return executeDispatchesAndRelease(e);
 };
+
 function accumulateInto(current, next) {
-  console.log(['accumulateInto'], { current, next })
+  console.log(['accumulateInto'], { current, next });
+
   if (current == null) {
     return next;
-  } // Both are not empty. Warning: Never call x.concat(y) when you are not
-  // certain that x is an Array (x could be a string with concat method).
+  }
 
   if (Array.isArray(current)) {
     if (Array.isArray(next)) {
@@ -1693,7 +1579,6 @@ function accumulateInto(current, next) {
   }
 
   if (Array.isArray(next)) {
-    // A bit too dangerous to mutate `next`.
     return [current].concat(next);
   }
 
@@ -1701,16 +1586,18 @@ function accumulateInto(current, next) {
 }
 
 function forEachAccumulated(arr, cb) {
-  console.log(['forEachAccumulated'], { arr, cb })
+  console.log(['forEachAccumulated'], { arr, cb });
   cb(arr);
 }
+
 let eventQueue = null;
+
 function runEventsInBatch(events) {
-  console.log(['runEventsInBatch'], { events })
+  console.log(['runEventsInBatch'], { events });
+
   if (events !== null) {
     eventQueue = accumulateInto(eventQueue, events);
-  } // Set `eventQueue` to null before processing it so that we can tell if more
-  // events get enqueued while processing.
+  }
 
   const processingEventQueue = eventQueue;
 
@@ -1720,10 +1607,7 @@ function runEventsInBatch(events) {
     return;
   }
 
-  forEachAccumulated(
-    processingEventQueue,
-    executeDispatchesAndReleaseTopLevel,
-  );
+  forEachAccumulated(processingEventQueue, executeDispatchesAndReleaseTopLevel);
 }
 
 function extractPluginEvents(
@@ -1733,10 +1617,17 @@ function extractPluginEvents(
   nativeEventTarget,
   eventSystemFlags,
 ) {
+  console.log(['extractPluginEvents'], {
+    topLevelType,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+  });
+
   let events = null;
 
   for (let i = 0; i < plugins.length; i++) {
-    // Not every plugin in the ordering may be loaded at runtime.
     const possiblePlugin = plugins[i];
 
     if (possiblePlugin) {
@@ -1756,6 +1647,7 @@ function extractPluginEvents(
 
   return events;
 }
+
 function runExtractedPluginEventsInBatch(
   topLevelType,
   targetInst,
@@ -1763,6 +1655,14 @@ function runExtractedPluginEventsInBatch(
   nativeEventTarget,
   eventSystemFlags,
 ) {
+  console.log(['runExtractedPluginEventsInBatch'], {
+    topLevelType,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+  });
+
   const events = extractPluginEvents(
     topLevelType,
     targetInst,
@@ -1773,11 +1673,11 @@ function runExtractedPluginEventsInBatch(
 
   runEventsInBatch(events);
 }
+
 function handleTopLevel(bookKeeping) {
-  let targetInst = bookKeeping.targetInst; // Loop through the hierarchy, in case there's any nested components.
-  // It's important that we build the array of ancestors before calling any
-  // event handlers, because event handlers can modify the DOM, leading to
-  // inconsistencies with ReactMount's node cache. See #1105.
+  console.log(['handleTopLevel'], { bookKeeping });
+
+  let targetInst = bookKeeping.targetInst;
   let ancestor = targetInst;
 
   do {
@@ -1810,7 +1710,7 @@ function handleTopLevel(bookKeeping) {
     const eventTarget = getEventTarget(bookKeeping.nativeEvent);
     const topLevelType = bookKeeping.topLevelType;
     const nativeEvent = bookKeeping.nativeEvent;
-    let eventSystemFlags = bookKeeping.eventSystemFlags; // If this is the first ancestor, we mark it on the system flags
+    let eventSystemFlags = bookKeeping.eventSystemFlags;
 
     if (i === 0) {
       eventSystemFlags |= IS_FIRST_ANCESTOR;
@@ -1825,6 +1725,7 @@ function handleTopLevel(bookKeeping) {
     );
   }
 }
+
 function dispatchEventForLegacyPluginEventSystem(
   topLevelType,
   eventSystemFlags,
@@ -1846,53 +1747,32 @@ function dispatchEventForLegacyPluginEventSystem(
   );
 
   try {
-    // Event queue being processed in the same cycle allows
-    // `preventDefault`.
     batchedEventUpdates(handleTopLevel, bookKeeping);
   } finally {
     releaseTopLevelCallbackBookKeeping(bookKeeping);
   }
 }
+
 function addEventBubbleListener(element, eventType, listener) {
+  console.log(['addEventBubbleListener'], { element, eventType, listener });
   element.addEventListener(eventType, listener, false);
 }
+
 function getClosestInstanceFromNode(targetNode) {
+  console.log(['getClosestInstanceFromNode'], { targetNode });
+
   let targetInst = targetNode[internalInstanceKey];
 
   if (targetInst) {
-    // Don't return HostRoot or SuspenseComponent here.
     return targetInst;
-  } // If the direct event target isn't a React owned DOM node, we need to look
-  // to see if one of its parents is a React owned DOM node.
+  }
 
   let parentNode = targetNode.parentNode;
 
   while (parentNode) {
-    // We'll check if this is a container root that could include
-    // React nodes in the future. We need to check this first because
-    // if we're a child of a dehydrated container, we need to first
-    // find that inner container before moving on to finding the parent
-    // instance. Note that we don't check this field on  the targetNode
-    // itself because the fibers are conceptually between the container
-    // node and the first child. It isn't surrounding the container node.
-    // If it's not a container, we check if it's an instance.
-    targetInst =
-      parentNode[internalInstanceKey];
+    targetInst = parentNode[internalInstanceKey];
 
     if (targetInst) {
-      // Since this wasn't the direct target of the event, we might have
-      // stepped past dehydrated DOM nodes to get here. However they could
-      // also have been non-React nodes. We need to answer which one.
-      // If we the instance doesn't have any children, then there can't be
-      // a nested suspense boundary within it. So we can use this as a fast
-      // bailout. Most of the time, when people add non-React children to
-      // the tree, it is using a ref to a child-less DOM node.
-      // Normally we'd only need to check one of the fibers because if it
-      // has ever gone from having children to deleting them or vice versa
-      // it would have deleted the dehydrated boundary nested inside already.
-      // However, since the HostRoot starts out with an alternate it might
-      // have one on the alternate so we need to check in case this was a
-      // root.
       return targetInst;
     }
 
@@ -1902,18 +1782,19 @@ function getClosestInstanceFromNode(targetNode) {
 
   return null;
 }
+
 function getEventTarget(nativeEvent) {
-  // Fallback to nativeEvent.srcElement for IE9
-  // https://github.com/facebook/react/issues/12506
-  let target = nativeEvent.target || nativeEvent.srcElement || window; // Normalize SVG <use> element events #4963
+  console.log(['getEventTarget'], { nativeEvent });
+
+  let target = nativeEvent.target || nativeEvent.srcElement || window;
 
   if (target.correspondingUseElement) {
     target = target.correspondingUseElement;
-  } // Safari may fire events on text nodes (Node.TEXT_NODE is 3).
-  // @see http://www.quirksmode.org/js/events_properties.html
+  }
 
   return target.nodeType === TEXT_NODE ? target.parentNode : target;
 }
+
 function attemptToDispatchEvent(
   topLevelType,
   eventSystemFlags,
@@ -1927,9 +1808,8 @@ function attemptToDispatchEvent(
     nativeEvent,
   });
 
-  // TODO: Warn if _enabled is false.
   const nativeEventTarget = getEventTarget(nativeEvent);
-  let targetInst = getClosestInstanceFromNode(nativeEventTarget);
+  const targetInst = getClosestInstanceFromNode(nativeEventTarget);
 
   dispatchEventForLegacyPluginEventSystem(
     topLevelType,
@@ -1940,13 +1820,9 @@ function attemptToDispatchEvent(
 
   return null;
 }
-function dispatchEvent(
-  topLevelType,
-  eventSystemFlags,
-  container,
-  nativeEvent,
-) {
-  console.log(['dispatchEvent'])
+
+function dispatchEvent(topLevelType, eventSystemFlags, container, nativeEvent) {
+  console.log(['dispatchEvent']);
   attemptToDispatchEvent(
     topLevelType,
     eventSystemFlags,
@@ -1954,8 +1830,10 @@ function dispatchEvent(
     nativeEvent,
   );
 }
+
 function trapEventForPluginEventSystem(container, topLevelType) {
-  console.log(['trapEventForPluginEventSystem'], { container, topLevelType })
+  console.log(['trapEventForPluginEventSystem'], { container, topLevelType });
+
   let listener;
 
   listener = dispatchEvent.bind(
@@ -1967,20 +1845,28 @@ function trapEventForPluginEventSystem(container, topLevelType) {
 
   addEventBubbleListener(container, topLevelType, listener);
 }
+
 function trapBubbledEvent(topLevelType, element) {
+  console.log(['trapBubbledEvent'], { topLevelType, element });
   trapEventForPluginEventSystem(element, topLevelType, false);
 }
+
 function legacyListenToTopLevelEvent(topLevelType, mountAt, listenerMap) {
-  console.log(['legacyListenToTopLevelEvent'], { topLevelType, mountAt, listenerMap })
+  console.log(['legacyListenToTopLevelEvent'], {
+    topLevelType,
+    mountAt,
+    listenerMap,
+  });
+
   if (!listenerMap.has(topLevelType)) {
-    // By default, listen on the top level to all non-media events.
-    // Media events don't bubble so adding the listener wouldn't do anything.
     trapBubbledEvent(topLevelType, mountAt);
     listenerMap.set(topLevelType, null);
   }
 }
 
 function legacyListenToEvent(registrationName, mountAt) {
+  console.log(['legacyListenToEvent'], { registrationName, mountAt });
+
   const listenerMap = getListenerMapForElement(mountAt);
   const dependencies = registrationNameDependencies[registrationName];
 
@@ -1992,7 +1878,11 @@ function legacyListenToEvent(registrationName, mountAt) {
 }
 
 function ensureListeningTo(rootContainerElement, registrationName) {
-  console.log(['ensureListeningTo'], { rootContainerElement, registrationName })
+  console.log(['ensureListeningTo'], {
+    rootContainerElement,
+    registrationName,
+  });
+
   const isDocumentOrFragment =
     rootContainerElement.nodeType === DOCUMENT_NODE ||
     rootContainerElement.nodeType === DOCUMENT_FRAGMENT_NODE;
@@ -2006,6 +1896,7 @@ function ensureListeningTo(rootContainerElement, registrationName) {
 var registrationNameModules = {};
 const HTML$1 = '__html';
 const STYLE = 'style';
+
 function setInitialDOMProperties(
   tag,
   domElement,
@@ -2013,6 +1904,14 @@ function setInitialDOMProperties(
   nextProps,
   isCustomComponentTag,
 ) {
+  console.log(['setInitialDOMProperties'], {
+    tag,
+    domElement,
+    rootContainerElement,
+    nextProps,
+    isCustomComponentTag,
+  });
+
   for (const propKey in nextProps) {
     if (!nextProps.hasOwnProperty(propKey)) {
       continue;
@@ -2023,11 +1922,9 @@ function setInitialDOMProperties(
     if (propKey === STYLE) {
       {
         if (nextProp) {
-          // Freeze the next style object so that we can assume it won't be
-          // mutated. We have already warned for this in the past.
           Object.freeze(nextProp);
         }
-      } // Relies on `updateStylesByID` not mutating `styleUpdates`.
+      }
 
       setValueForStyles(domElement, nextProp);
     } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
@@ -2038,10 +1935,6 @@ function setInitialDOMProperties(
       }
     } else if (propKey === CHILDREN) {
       if (typeof nextProp === 'string') {
-        // Avoid setting initial textContent when the text is empty. In IE11 setting
-        // textContent on a <textarea> will cause the placeholder to not
-        // show within the <textarea> until it has been focused and blurred again.
-        // https://github.com/facebook/react/issues/6731#issuecomment-254874553
         const canSetTextContent = tag !== 'textarea' || nextProp !== '';
 
         if (canSetTextContent) {
@@ -2050,104 +1943,29 @@ function setInitialDOMProperties(
       } else if (typeof nextProp === 'number') {
         setTextContent(domElement, '' + nextProp);
       }
-    }
-    else if (propKey === AUTOFOCUS);
+    } else if (propKey === AUTOFOCUS);
     else if (registrationNameModules.hasOwnProperty(propKey)) {
       if (nextProp != null) {
         ensureListeningTo(rootContainerElement, propKey);
       }
     } else if (nextProp != null) {
-      setValueForProperty(
-        domElement,
-        propKey,
-        nextProp,
-        isCustomComponentTag,
-      );
+      setValueForProperty(domElement, propKey, nextProp, isCustomComponentTag);
     }
   }
 }
 
 function setInitialProperties(domElement, tag, rawProps, rootContainerElement) {
+  console.log(['setInitialProperties'], {
+    domElement,
+    tag,
+    rawProps,
+    rootContainerElement,
+  });
+
   const isCustomComponentTag = isCustomComponent(tag, rawProps);
   let props;
 
-  switch (tag) {
-    // case 'iframe':
-    // case 'object':
-    // case 'embed':
-    //   trapBubbledEvent(TOP_LOAD, domElement);
-    //   props = rawProps;
-    //
-    //   break;
-    // case 'video':
-    // case 'audio':
-    //   // Create listener for each media event
-    //   for (let i = 0; i < mediaEventTypes.length; i++) {
-    //     trapBubbledEvent(mediaEventTypes[i], domElement);
-    //   }
-    //
-    //   props = rawProps;
-    //
-    //   break;
-    // case 'source':
-    //   trapBubbledEvent(TOP_ERROR, domElement);
-    //   props = rawProps;
-    //
-    //   break;
-    // case 'img':
-    // case 'image':
-    // case 'link':
-    //   trapBubbledEvent(TOP_ERROR, domElement);
-    //   trapBubbledEvent(TOP_LOAD, domElement);
-    //   props = rawProps;
-    //
-    //   break;
-    // case 'form':
-    //   trapBubbledEvent(TOP_RESET, domElement);
-    //   trapBubbledEvent(TOP_SUBMIT, domElement);
-    //   props = rawProps;
-    //
-    //   break;
-    // case 'details':
-    //   trapBubbledEvent(TOP_TOGGLE, domElement);
-    //   props = rawProps;
-    //
-    //   break;
-    // case 'input':
-    //   initWrapperState(domElement, rawProps);
-    //   props = getHostProps(domElement, rawProps);
-    //   trapBubbledEvent(TOP_INVALID, domElement); // For controlled components we always need to ensure we're listening
-    //   // to onChange. Even if there is no listener.
-    //
-    //   ensureListeningTo(rootContainerElement, 'onChange');
-    //
-    //   break;
-    // case 'option':
-    //   validateProps(domElement, rawProps);
-    //   props = getHostProps$1(domElement, rawProps);
-    //
-    //   break;
-    // case 'select':
-    //   initWrapperState$1(domElement, rawProps);
-    //   props = getHostProps$2(domElement, rawProps);
-    //   trapBubbledEvent(TOP_INVALID, domElement); // For controlled components we always need to ensure we're listening
-    //   // to onChange. Even if there is no listener.
-    //
-    //   ensureListeningTo(rootContainerElement, 'onChange');
-    //
-    //   break;
-    // case 'textarea':
-    //   initWrapperState$2(domElement, rawProps);
-    //   props = getHostProps$3(domElement, rawProps);
-    //   trapBubbledEvent(TOP_INVALID, domElement); // For controlled components we always need to ensure we're listening
-    //   // to onChange. Even if there is no listener.
-    //
-    //   ensureListeningTo(rootContainerElement, 'onChange');
-    //
-    //   break;
-    default:
-      props = rawProps;
-  }
+  props = rawProps;
 
   setInitialDOMProperties(
     tag,
@@ -2156,41 +1974,11 @@ function setInitialProperties(domElement, tag, rawProps, rootContainerElement) {
     props,
     isCustomComponentTag,
   );
-
-  // switch (tag) {
-  //   case 'input':
-  //     // TODO: Make sure we check if this is still unmounted or do any clean
-  //     // up necessary since we never stop tracking anymore.
-  //     track(domElement);
-  //     postMountWrapper(domElement, rawProps, false);
-  //
-  //     break;
-  //   case 'textarea':
-  //     // TODO: Make sure we check if this is still unmounted or do any clean
-  //     // up necessary since we never stop tracking anymore.
-  //     track(domElement);
-  //     postMountWrapper$3(domElement);
-  //
-  //     break;
-  //   case 'option':
-  //     postMountWrapper$1(domElement, rawProps);
-  //
-  //     break;
-  //   case 'select':
-  //     postMountWrapper$2(domElement, rawProps);
-  //
-  //     break;
-  //   default:
-  //     if (typeof props.onClick === 'function') {
-  //       // TODO: This cast may not be sound for SVG, MathML or custom elements.
-  //       trapClickOnNonInteractiveElement(domElement);
-  //     }
-  //
-  //     break;
-  // }
 }
 
 function shouldAutoFocusHostComponent(type, props) {
+  console.log(['shouldAutoFocusHostComponent'], { type, props });
+
   switch (type) {
     case 'button':
     case 'input':
@@ -2208,14 +1996,19 @@ function finalizeInitialChildren(
   props,
   rootContainerInstance,
 ) {
+  console.log(['finalizeInitialChildren'], {
+    domElement,
+    type,
+    props,
+    rootContainerInstance,
+  });
   setInitialProperties(domElement, type, props, rootContainerInstance);
 
   return shouldAutoFocusHostComponent(type, props);
 }
 
 function markUpdate(workInProgress) {
-  // Tag the fiber with an update effect. This turns a Placement into
-  // a PlacementAndUpdate.
+  console.log(['markUpdate'], { workInProgress });
   workInProgress.effectTag |= Update;
 }
 
@@ -2247,9 +2040,7 @@ function completeWork(current, workInProgress) {
           return null;
         }
 
-        const currentHostContext = contextStackCursor$1.current; // TODO: Move createInstance to beginWork and keep it on a context
-        // "stack" as the parent. Then append children as we go in beginWork
-        // or completeWork depending on whether we want to add them top->down or
+        const currentHostContext = contextStackCursor$1.current;
         // bottom->up. Top->down is faster in IE11.
         const instance = createInstance(
           type,
@@ -2259,11 +2050,9 @@ function completeWork(current, workInProgress) {
           workInProgress,
         );
 
-        appendAllChildren(instance, workInProgress, false, false); // This needs to be set before we mount Flare event listeners
+        appendAllChildren(instance, workInProgress, false, false);
 
         workInProgress.stateNode = instance;
-        // (eg DOM renderer supports auto-focus for certain elements).
-        // Make sure such renderers get scheduled for later work.
 
         if (
           finalizeInitialChildren(
@@ -2283,6 +2072,8 @@ function completeWork(current, workInProgress) {
 }
 
 function createFiberFromText(content) {
+  console.log(['createFiberFromText'], { content });
+
   const fiber = createFiber(HostText, content, null);
 
   return fiber;
@@ -2297,7 +2088,7 @@ function createFiberFromTypeAndProps(type, key, pendingProps, owner, mode) {
   });
 
   let fiber;
-  let fiberTag = IndeterminateComponent; // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
+  let fiberTag = IndeterminateComponent;
   const resolvedType = type;
 
   if (typeof type === 'string') {
@@ -2324,15 +2115,14 @@ function createFiberFromElement(element) {
 }
 
 function ChildReconciler(shouldTrackSideEffects) {
+  console.log(['ChildReconciler'], { shouldTrackSideEffects });
+
   function deleteChild(returnFiber, childToDelete) {
+    console.log(['deleteChild'], { returnFiber, childToDelete });
+
     if (!shouldTrackSideEffects) {
-      // Noop.
       return;
-    } // Deletions are added in reversed order so we add it to the front.
-    // At this point, the return fiber's effect list is empty except for
-    // deletions, so we can just append the deletion to the list. The remaining
-    // effects aren't added until the complete phase. Once we implement
-    // resuming, this may not be true.
+    }
 
     const last = returnFiber.lastEffect;
 
@@ -2351,10 +2141,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     console.log(['deleteRemainingChildren'], currentFirstChild);
 
     if (!shouldTrackSideEffects) {
-      // Noop.
       return null;
-    } // TODO: For the shouldClone case, this could be micro-optimized a bit by
-    // assuming that after the first child we've already added everything.
+    }
 
     let childToDelete = currentFirstChild;
 
@@ -2369,9 +2157,6 @@ function ChildReconciler(shouldTrackSideEffects) {
   function mapRemainingChildren(returnFiber, currentFirstChild) {
     console.log(['mapRemainingChildren'], { returnFiber, currentFirstChild });
 
-    // Add the remaining children to a temporary map so that we can find them by
-    // keys quickly. Implicit (null) keys get added to this set with their index
-    // instead.
     const existingChildren = new Map();
     let existingChild = currentFirstChild;
 
@@ -2391,8 +2176,6 @@ function ChildReconciler(shouldTrackSideEffects) {
   function useFiber(fiber, pendingProps) {
     console.log(['useFiber'], { fiber, pendingProps });
 
-    // We currently set sibling to null and index to 0 here because it is easy
-    // to forget to do before returning it. E.g. for the single child case.
     const clone = createWorkInProgress(fiber, pendingProps);
 
     clone.index = 0;
@@ -2406,7 +2189,6 @@ function ChildReconciler(shouldTrackSideEffects) {
     newFiber.index = newIndex;
 
     if (!shouldTrackSideEffects) {
-      // Noop.
       return lastPlacedIndex;
     }
 
@@ -2416,16 +2198,13 @@ function ChildReconciler(shouldTrackSideEffects) {
       const oldIndex = current.index;
 
       if (oldIndex < lastPlacedIndex) {
-        // This is a move.
         newFiber.effectTag = Placement;
 
         return lastPlacedIndex;
       } else {
-        // This item can stay in place.
         return oldIndex;
       }
     } else {
-      // This is an insertion.
       newFiber.effectTag = Placement;
 
       return lastPlacedIndex;
@@ -2433,8 +2212,8 @@ function ChildReconciler(shouldTrackSideEffects) {
   }
 
   function placeSingleChild(newFiber) {
-    // This is simpler for the single child case. We only need to do a
-    // placement for inserting new children.
+    console.log(['placeSingleChild'], { newFiber });
+
     if (shouldTrackSideEffects && newFiber.alternate === null) {
       newFiber.effectTag = Placement;
     }
@@ -2443,15 +2222,15 @@ function ChildReconciler(shouldTrackSideEffects) {
   }
 
   function updateTextNode(returnFiber, current, textContent) {
+    console.log(['updateTextNode'], { returnFiber, current, textContent });
+
     if (current === null || current.tag !== HostText) {
-      // Insert
       const created = createFiberFromText(textContent);
 
       created.return = returnFiber;
 
       return created;
     } else {
-      // Update
       const existing = useFiber(current, textContent);
 
       existing.return = returnFiber;
@@ -2461,9 +2240,10 @@ function ChildReconciler(shouldTrackSideEffects) {
   }
 
   function updateElement(returnFiber, current, element) {
+    console.log(['updateElement'], { returnFiber, current, element });
+
     if (current !== null) {
       if (current.elementType === element.type) {
-        // Move based on index
         const existing = useFiber(current, element.props);
 
         existing.ref = null;
@@ -2472,7 +2252,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
         return existing;
       }
-    } // Insert
+    }
 
     const created = createFiberFromElement(element);
 
@@ -2490,13 +2270,9 @@ function ChildReconciler(shouldTrackSideEffects) {
       newChild,
     });
 
-    // Update the fiber if the keys match, otherwise return null.
     const key = oldFiber !== null ? oldFiber.key : null;
 
     if (typeof newChild === 'string' || typeof newChild === 'number') {
-      // Text nodes don't have keys. If the previous node is implicitly keyed
-      // we can continue to replace it without aborting even if it is not a text
-      // node.
       if (key !== null) {
         return null;
       }
@@ -2528,8 +2304,6 @@ function ChildReconciler(shouldTrackSideEffects) {
     });
 
     if (typeof newChild === 'string' || typeof newChild === 'number') {
-      // Text nodes don't have keys, so we neither have to check the old nor
-      // new node for the key. If both are text nodes, they match.
       const matchedFiber = existingChildren.get(newIdx) || null;
 
       return updateTextNode(returnFiber, matchedFiber, '' + newChild);
@@ -2576,10 +2350,6 @@ function ChildReconciler(shouldTrackSideEffects) {
       const newFiber = updateSlot(returnFiber, oldFiber, newChildren[newIdx]);
 
       if (newFiber === null) {
-        // TODO: This breaks on empty slots like null children. That's
-        // unfortunate because it triggers the slow path all the time. We need
-        // a better way to communicate whether this was a miss or null,
-        // boolean, undefined, etc.
         if (oldFiber === null) {
           oldFiber = nextOldFiber;
         }
@@ -2589,8 +2359,6 @@ function ChildReconciler(shouldTrackSideEffects) {
 
       if (shouldTrackSideEffects) {
         if (oldFiber && newFiber.alternate === null) {
-          // We matched the slot, but we didn't reuse the existing fiber, so we
-          // need to delete the existing child.
           deleteChild(returnFiber, oldFiber);
         }
       }
@@ -2598,13 +2366,8 @@ function ChildReconciler(shouldTrackSideEffects) {
       lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
 
       if (previousNewFiber === null) {
-        // TODO: Move out of the loop. This only happens for the first run.
         resultingFirstChild = newFiber;
       } else {
-        // TODO: Defer siblings if we're not at the right index for this slot.
-        // I.e. if we had null values before, then we want to defer this
-        // for each null value. However, we also don't want to call updateSlot
-        // with the previous one.
         previousNewFiber.sibling = newFiber;
       }
 
@@ -2625,10 +2388,6 @@ function ChildReconciler(shouldTrackSideEffects) {
       if (_newFiber2 !== null) {
         if (shouldTrackSideEffects) {
           if (_newFiber2.alternate !== null) {
-            // The new fiber is a work in progress, but if there exists a
-            // current, that means that we reused the fiber. We need to delete
-            // it from the child list so that we don't add it to the deletion
-            // list.
             existingChildren.delete(
               _newFiber2.key === null ? newIdx : _newFiber2.key,
             );
@@ -2648,8 +2407,6 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     if (shouldTrackSideEffects) {
-      // Any existing children that weren't consumed above were deleted. We need
-      // to add them to the deletion list.
       existingChildren.forEach(function (child) {
         return deleteChild(returnFiber, child);
       });
@@ -2668,8 +2425,6 @@ function ChildReconciler(shouldTrackSideEffects) {
     let child = currentFirstChild;
 
     while (child !== null) {
-      // TODO: If key === null and child.key === null, then this only applies to
-      // the first item in the list.
       if (child.elementType === element.type) {
         deleteRemainingChildren(returnFiber, child.sibling);
 
@@ -2725,14 +2480,9 @@ function ChildReconciler(shouldTrackSideEffects) {
 
 function completeUnitOfWork(unitOfWork) {
   console.log(['completeUnitOfWork'], { unitOfWork });
-  // Attempt to complete the current unit of work, then move to the next
-  // sibling. If there are no more siblings, return to the parent fiber.
   workInProgress = unitOfWork;
 
   do {
-    // The current, flushed, state of this fiber is the alternate. Ideally
-    // nothing should rely on this, but relying on it here means that we don't
-    // need an additional field on the work in progress.
     const current = workInProgress.alternate;
     const returnFiber = workInProgress.return; // Check if the work completed or if something threw.
     let next = void 0;
@@ -2743,9 +2493,6 @@ function completeUnitOfWork(unitOfWork) {
       returnFiber !== null && // Do not append effects to parents if a sibling failed to complete
       (returnFiber.effectTag & Incomplete) === NoEffect
     ) {
-      // Append all the effects of the subtree and this fiber onto the effect
-      // list of the parent. The completion order of the children affects the
-      // side-effect order.
       if (returnFiber.firstEffect === null) {
         returnFiber.firstEffect = workInProgress.firstEffect;
       }
@@ -2755,18 +2502,10 @@ function completeUnitOfWork(unitOfWork) {
           returnFiber.lastEffect.nextEffect = workInProgress.firstEffect;
         }
 
-
         returnFiber.lastEffect = workInProgress.lastEffect;
-      } // If this fiber had side-effects, we append it AFTER the children's
-      // side-effects. We can perform certain side-effects earlier if needed,
-      // by doing multiple passes over the effect list. We don't want to
-      // schedule our own side-effect on our own list because if end up
-      // reusing children we'll schedule this effect onto itself since we're
-      // at the end.
+      }
 
-      const effectTag = workInProgress.effectTag; // Skip both NoWork and PerformedWork tags when creating the effect
-      // list. PerformedWork effect is read by React DevTools but shouldn't be
-      // committed.
+      const effectTag = workInProgress.effectTag;
 
       if (effectTag > PerformedWork) {
         if (returnFiber.lastEffect !== null) {
@@ -2775,7 +2514,6 @@ function completeUnitOfWork(unitOfWork) {
           returnFiber.firstEffect = workInProgress;
         }
 
-
         returnFiber.lastEffect = workInProgress;
       }
     }
@@ -2783,9 +2521,8 @@ function completeUnitOfWork(unitOfWork) {
     const siblingFiber = workInProgress.sibling;
 
     if (siblingFiber !== null) {
-      // If there is more work to do in this returnFiber, do that next.
       return siblingFiber;
-    } // Otherwise, return to the parent
+    }
 
     workInProgress = returnFiber;
   } while (workInProgress !== null); // We've reached the root.
@@ -2799,9 +2536,6 @@ function performUnitOfWork(unitOfWork) {
   console.log(['performUnitOfWork'], performUnitOfWorkCounter, { unitOfWork });
   performUnitOfWorkCounter++;
 
-  // The current, flushed, state of this fiber is the alternate. Ideally
-  // nothing should rely on this, but relying on it here means that we don't
-  // need an additional field on the work in progress.
   const current = unitOfWork.alternate;
   let next;
 
@@ -2812,7 +2546,6 @@ function performUnitOfWork(unitOfWork) {
   console.log(['performUnitOfWork.next'], next);
 
   if (next === null) {
-    // If this doesn't spawn new work, complete the current work.
     next = completeUnitOfWork(unitOfWork);
   }
 
@@ -2822,6 +2555,8 @@ function performUnitOfWork(unitOfWork) {
 }
 
 function hasSelectionCapabilities(elem) {
+  console.log(['hasSelectionCapabilities'], { elem });
+
   const nodeName = elem && elem.nodeName && elem.nodeName.toLowerCase();
 
   return (
@@ -2838,6 +2573,8 @@ function hasSelectionCapabilities(elem) {
 }
 
 function getActiveElement() {
+  console.log(['getActiveElement']);
+
   const doc = typeof document !== 'undefined' ? document : undefined;
 
   if (typeof doc === 'undefined') {
@@ -2851,96 +2588,12 @@ function getActiveElement() {
   }
 }
 
-function getModernOffsetsFromPoints(
-  outerNode,
-  anchorNode,
-  anchorOffset,
-  focusNode,
-  focusOffset,
-) {
-  let length = 0;
-  let start = -1;
-  let end = -1;
-  let indexWithinAnchor = 0;
-  let indexWithinFocus = 0;
-  let node = outerNode;
-  let parentNode = null;
-
-  outer: while (true) {
-    let next = null;
-
-    while (true) {
-      if (
-        node === anchorNode &&
-        (anchorOffset === 0 || node.nodeType === TEXT_NODE)
-      ) {
-        start = length + anchorOffset;
-      }
-
-      if (
-        node === focusNode &&
-        (focusOffset === 0 || node.nodeType === TEXT_NODE)
-      ) {
-        end = length + focusOffset;
-      }
-
-      if (node.nodeType === TEXT_NODE) {
-        length += node.nodeValue.length;
-      }
-
-      if ((next = node.firstChild) === null) {
-        break;
-      } // Moving from `node` to its first child `next`.
-
-      parentNode = node;
-      node = next;
-    }
-
-    while (true) {
-      if (node === outerNode) {
-        // If `outerNode` has children, this is always the second time visiting
-        // it. If it has no children, this is still the first loop, and the only
-        // valid selection is anchorNode and focusNode both equal to this node
-        // and both offsets 0, in which case we will have handled above.
-        break outer;
-      }
-
-      if (parentNode === anchorNode && ++indexWithinAnchor === anchorOffset) {
-        start = length;
-      }
-
-      if (parentNode === focusNode && ++indexWithinFocus === focusOffset) {
-        end = length;
-      }
-
-      if ((next = node.nextSibling) !== null) {
-        break;
-      }
-
-      node = parentNode;
-      parentNode = node.parentNode;
-    } // Moving from `node` to its next sibling `next`.
-
-    node = next;
-  }
-
-  if (start === -1 || end === -1) {
-    // This should never happen. (Would happen if the anchor/focus nodes aren't
-    // actually inside the passed-in node.)
-    return null;
-  }
-
-  return {
-    start,
-    end,
-  };
-}
-
 function getSelectionInformation() {
+  console.log(['getSelectionInformation']);
+
   const focusedElem = getActiveElement();
 
   return {
-    // Used by Flare
     activeElementDetached: null,
     focusedElem: focusedElem,
     selectionRange: null,
@@ -2948,7 +2601,8 @@ function getSelectionInformation() {
 }
 
 function workLoopSync() {
-  // Already timed out, so perform work without checking if we need to yield.
+  console.log(['workLoopSync']);
+
   while (workInProgress !== null) {
     const work = performUnitOfWork(workInProgress);
 
@@ -2959,10 +2613,13 @@ function workLoopSync() {
 let _enabled = true;
 
 function isEnabled() {
+  console.log(['isEnabled']);
+
   return _enabled;
 }
 
 function setEnabled(enabled) {
+  console.log(['setEnabled'], { enabled });
   _enabled = !!enabled;
 }
 
@@ -2970,16 +2627,21 @@ let eventsEnabled = null;
 let selectionInformation = null;
 
 function prepareForCommit() {
+  console.log(['prepareForCommit']);
   eventsEnabled = isEnabled();
   selectionInformation = getSelectionInformation();
   setEnabled(false);
 }
 
 function isTextNode(node) {
+  console.log(['isTextNode'], { node });
+
   return node && node.nodeType === TEXT_NODE;
 }
 
 function containsNode(outerNode, innerNode) {
+  console.log(['containsNode'], { outerNode, innerNode });
+
   if (!outerNode || !innerNode) {
     return false;
   } else if (outerNode === innerNode) {
@@ -2998,6 +2660,8 @@ function containsNode(outerNode, innerNode) {
 }
 
 function isInDocument(node) {
+  console.log(['isInDocument'], { node });
+
   return (
     node &&
     node.ownerDocument &&
@@ -3006,6 +2670,8 @@ function isInDocument(node) {
 }
 
 function getSiblingNode(node) {
+  console.log(['getSiblingNode'], { node });
+
   while (node) {
     if (node.nextSibling) {
       return node.nextSibling;
@@ -3016,6 +2682,8 @@ function getSiblingNode(node) {
 }
 
 function getLeafNode(node) {
+  console.log(['getLeafNode'], { node });
+
   while (node && node.firstChild) {
     node = node.firstChild;
   }
@@ -3024,6 +2692,8 @@ function getLeafNode(node) {
 }
 
 function getNodeForCharacterOffset(root, offset) {
+  console.log(['getNodeForCharacterOffset'], { root, offset });
+
   let node = getLeafNode(root);
   let nodeStart = 0;
   let nodeEnd = 0;
@@ -3047,10 +2717,10 @@ function getNodeForCharacterOffset(root, offset) {
 }
 
 function setOffsets(node, offsets) {
+  console.log(['setOffsets'], { node, offsets });
+
   const doc = node.ownerDocument || document;
-  const win = (doc && doc.defaultView) || window; // Edge fails with "Object expected" in some scenarios.
-  // (For instance: TinyMCE editor used in a list component that supports pasting to add more,
-  // fails when pasting 100+ items)
+  const win = (doc && doc.defaultView) || window;
 
   if (!win.getSelection) {
     return;
@@ -3059,8 +2729,7 @@ function setOffsets(node, offsets) {
   const selection = win.getSelection();
   const length = node.textContent.length;
   let start = Math.min(offsets.start, length);
-  let end = offsets.end === undefined ? start : Math.min(offsets.end, length); // IE 11 uses modern selection, but doesn't support the extend method.
-  // Flip backward selections, so we can set with a single range.
+  let end = offsets.end === undefined ? start : Math.min(offsets.end, length);
 
   if (!selection.extend && start > end) {
     const temp = end;
@@ -3099,6 +2768,8 @@ function setOffsets(node, offsets) {
 }
 
 function setSelection(input, offsets) {
+  console.log(['setSelection'], { input, offsets });
+
   let start = offsets.start,
     end = offsets.end;
 
@@ -3115,6 +2786,8 @@ function setSelection(input, offsets) {
 }
 
 function restoreSelection(priorSelectionInformation) {
+  console.log(['restoreSelection'], { priorSelectionInformation });
+
   const curFocusedElem = getActiveElement();
   const priorFocusedElem = priorSelectionInformation.focusedElem;
   const priorSelectionRange = priorSelectionInformation.selectionRange;
@@ -3125,7 +2798,7 @@ function restoreSelection(priorSelectionInformation) {
       hasSelectionCapabilities(priorFocusedElem)
     ) {
       setSelection(priorFocusedElem, priorSelectionRange);
-    } // Focusing a node can change the scroll position, which is undesirable
+    }
 
     const ancestors = [];
     let ancestor = priorFocusedElem;
@@ -3154,6 +2827,7 @@ function restoreSelection(priorSelectionInformation) {
 }
 
 function resetAfterCommit() {
+  console.log(['resetAfterCommit']);
   restoreSelection(selectionInformation);
   setEnabled(eventsEnabled);
   eventsEnabled = null;
@@ -3165,11 +2839,13 @@ let current = null;
 let nextEffect = null;
 
 function resetCurrentFiber() {
+  console.log(['resetCurrentFiber']);
   current = null;
   isRendering = false;
 }
 
 function setCurrentFiber(fiber) {
+  console.log(['setCurrentFiber'], { fiber });
   current = fiber;
   isRendering = false;
 }
@@ -3177,16 +2853,22 @@ function setCurrentFiber(fiber) {
 let effectCountInCurrentCommit = 0;
 
 function recordEffect() {
+  console.log(['recordEffect']);
+
   {
     effectCountInCurrentCommit++;
   }
 }
 
 function isHostParent(fiber) {
+  console.log(['isHostParent'], { fiber });
+
   return fiber.tag === HostComponent || fiber.tag === HostRoot;
 }
 
 function getHostParentFiber(fiber) {
+  console.log(['getHostParentFiber'], { fiber });
+
   let parent = fiber.return;
 
   while (parent !== null) {
@@ -3201,18 +2883,11 @@ function getHostParentFiber(fiber) {
 function getHostSibling(fiber) {
   console.log(['getHostSibling'], { fiber });
 
-  // We're going to search forward into the tree until we find a sibling host
-  // node. Unfortunately, if multiple insertions are done in a row we have to
-  // search past them. This leads to exponential search for the next sibling.
-  // TODO: Find a more efficient way to do this.
   let node = fiber;
 
   siblings: while (true) {
-    // If we didn't find anything, let's try the next sibling.
     while (node.sibling === null) {
       if (node.return === null || isHostParent(node.return)) {
-        // If we pop out of the root or hit the parent the fiber we are the
-        // last sibling.
         return null;
       }
 
@@ -3223,13 +2898,9 @@ function getHostSibling(fiber) {
     node = node.sibling;
 
     while (node.tag !== HostComponent && node.tag !== HostText) {
-      // If it is not host node and, we might have a host node inside it.
-      // Try to search down until we find one.
       if (node.effectTag & Placement) {
-        // If we don't have a child, try the siblings instead.
         continue siblings;
-      } // If we don't have a child, try the siblings instead.
-      // We also skip portals because they are not part of this host tree.
+      }
 
       if (node.child === null) {
         continue siblings;
@@ -3237,10 +2908,9 @@ function getHostSibling(fiber) {
         node.child.return = node;
         node = node.child;
       }
-    } // Check if this host node is stable or about to be placed.
+    }
 
     if (!(node.effectTag & Placement)) {
-      // Found it!
       return node.stateNode;
     }
   }
@@ -3277,10 +2947,13 @@ function insertOrAppendPlacementNodeIntoContainer(node, before, parent) {
 }
 
 function appendChild(parentInstance, child) {
+  console.log(['parentInstance'], { parentInstance, child });
   parentInstance.appendChild(child);
 }
 
 function insertOrAppendPlacementNode(node, before, parent) {
+  console.log(['insertOrAppendPlacementNode'], { node, before, parent });
+
   const tag = node.tag;
   const isHost = tag === HostComponent || tag === HostText;
 
@@ -3307,7 +2980,7 @@ function insertOrAppendPlacementNode(node, before, parent) {
 function commitPlacement(finishedWork) {
   console.log(['commitPlacement'], { finishedWork });
 
-  const parentFiber = getHostParentFiber(finishedWork); // Note: these two variables *must* always be updated together.
+  const parentFiber = getHostParentFiber(finishedWork);
   let parent;
   let isContainer;
   const parentStateNode = parentFiber.stateNode;
@@ -3325,8 +2998,7 @@ function commitPlacement(finishedWork) {
       break;
   }
 
-  const before = getHostSibling(finishedWork); // We only have the top Fiber that was inserted but we need to recurse down its
-  // children to find all the terminal nodes.
+  const before = getHostSibling(finishedWork);
 
   if (isContainer) {
     insertOrAppendPlacementNodeIntoContainer(finishedWork, before, parent);
@@ -3373,7 +3045,6 @@ const isUnitlessNumber = {
   widows: true,
   zIndex: true,
   zoom: true,
-  // SVG-related properties
   fillOpacity: true,
   floodOpacity: true,
   stopOpacity: true,
@@ -3385,15 +3056,8 @@ const isUnitlessNumber = {
 };
 
 function dangerousStyleValue(name, value, isCustomProperty) {
-  // Note that we've removed escapeTextForBrowser() calls here since the
-  // whole string will be escaped when the attribute is injected into
-  // the markup. If you provide unsafe user data here they can inject
-  // arbitrary CSS which may be problematic (I couldn't repro this):
-  // https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet
-  // http://www.thespanner.co.uk/2007/11/26/ultimate-xss-css-injection/
-  // This is not an XSS hole but instead a potential CSS injection issue
-  // which has lead to a greater discussion about how we're going to
-  // trust URLs moving forward. See #2115901
+  console.log(['dangerousStyleValue'], { name, value, isCustomProperty });
+
   const isEmpty = value == null || typeof value === 'boolean' || value === '';
 
   if (isEmpty) {
@@ -3406,13 +3070,15 @@ function dangerousStyleValue(name, value, isCustomProperty) {
     value !== 0 &&
     !(isUnitlessNumber.hasOwnProperty(name) && isUnitlessNumber[name])
   ) {
-    return value + 'px'; // Presumes implicit 'px' suffix for unitless numbers
+    return value + 'px';
   }
 
   return ('' + value).trim();
 }
 
 function setValueForStyles(node, styles) {
+  console.log(['setValueForStyles'], { node, styles });
+
   const style = node.style;
 
   for (let styleName in styles) {
@@ -3440,10 +3106,13 @@ function setValueForStyles(node, styles) {
 }
 
 function setInnerHTML(node, html) {
+  console.log(['setInnerHTML'], { node, html });
   node.innerHTML = html;
 }
 
 const setTextContent = function (node, text) {
+  console.log(['setTextContent'], { node, text });
+
   if (text) {
     const firstChild = node.firstChild;
 
@@ -3491,70 +3160,9 @@ function updateDOMProperties(
   }
 }
 
-function setDefaultValue(node, type, value) {
-  if (
-    // Focused number inputs synchronize on blur. See ChangeEventPlugin.js
-    type !== 'number' ||
-    node.ownerDocument.activeElement !== node
-  ) {
-    if (value == null) {
-      node.defaultValue = toString(node._wrapperState.initialValue);
-    } else if (node.defaultValue !== toString(value)) {
-      node.defaultValue = toString(value);
-    }
-  }
-}
-
-function updateWrapper(element, props) {
-  const node = element;
-
-  updateChecked(element, props);
-
-  const value = getToStringValue(props.value);
-  const type = props.type;
-
-  if (value != null) {
-    if (type === 'number') {
-      if (
-        (value === 0 && node.value === '') || // We explicitly want to coerce to number here if possible.
-        // eslint-disable-next-line
-        node.value != value) {
-        node.value = toString(value);
-      }
-    } else if (node.value !== toString(value)) {
-      node.value = toString(value);
-    }
-  } else if (type === 'submit' || type === 'reset') {
-    // Submit/reset inputs need the attribute removed completely to avoid
-    // blank-text buttons.
-    node.removeAttribute('value');
-
-    return;
-  }
-
-  {
-    // When syncing the value attribute, the value comes from a cascade of
-    // properties:
-    //  1. The value React property
-    //  2. The defaultValue React property
-    //  3. Otherwise there should be no change
-    if (props.hasOwnProperty('value')) {
-      setDefaultValue(node, props.type, value);
-    } else if (props.hasOwnProperty('defaultValue')) {
-      setDefaultValue(node, props.type, getToStringValue(props.defaultValue));
-    }
-  }
-
-  {
-    // When syncing the checked attribute, it only changes when it needs
-    // to be removed, such as transitioning from a checkbox into a text input
-    if (props.checked == null && props.defaultChecked != null) {
-      node.defaultChecked = !!props.defaultChecked;
-    }
-  }
-}
-
 function shouldIgnoreAttribute(name, isCustomComponentTag) {
+  console.log(['shouldIgnoreAttribute'], { name, isCustomComponentTag });
+
   if (isCustomComponentTag) {
     return false;
   }
@@ -3576,6 +3184,13 @@ function shouldRemoveAttribute(
   propertyInfo,
   isCustomComponentTag,
 ) {
+  console.log(['shouldRemoveAttribute'], {
+    name,
+    value,
+    propertyInfo,
+    isCustomComponentTag,
+  });
+
   if (value === null || typeof value === 'undefined') {
     return true;
   }
@@ -3588,6 +3203,13 @@ function shouldRemoveAttribute(
 }
 
 function setValueForProperty(node, name, value, isCustomComponentTag) {
+  console.log(['setValueForProperty'], {
+    node,
+    name,
+    value,
+    isCustomComponentTag,
+  });
+
   const propertyInfo = null;
 
   if (shouldIgnoreAttribute(name, isCustomComponentTag)) {
@@ -3596,7 +3218,7 @@ function setValueForProperty(node, name, value, isCustomComponentTag) {
 
   if (shouldRemoveAttribute(name, value, propertyInfo, isCustomComponentTag)) {
     value = null;
-  } // If the prop isn't in the special list, treat it as a simple attribute.
+  }
 
   const mustUseProperty = propertyInfo.mustUseProperty;
 
@@ -3608,92 +3230,15 @@ function setValueForProperty(node, name, value, isCustomComponentTag) {
 
       node[propertyName] = type === BOOLEAN ? false : '';
     } else {
-      // Contrary to `setAttribute`, object properties are properly
-      // `toString`ed by IE8/9.
       node[propertyName] = value;
     }
 
     return;
-  } // The rest are treated as attributes with special cases.
-
-  const attributeName = propertyInfo.attributeName,
-    attributeNamespace = propertyInfo.attributeNamespace;
-
-  if (value === null) {
-    node.removeAttribute(attributeName);
-  } else {
-    const _type = propertyInfo.type;
-    let attributeValue;
-
-    if (_type === BOOLEAN || (_type === OVERLOADED_BOOLEAN && value === true)) {
-      // If attribute type is boolean, we know for sure it won't be an execution sink
-      // and we won't require Trusted Type here.
-      attributeValue = '';
-    } else {
-      // `setAttribute` with objects becomes only `[object]` in IE8/9,
-      // ('' + value) makes it output the correct toString()-value.
-      {
-        attributeValue = '' + value;
-      }
-
-      if (propertyInfo.sanitizeURL) {
-        sanitizeURL(attributeValue.toString());
-      }
-    }
-
-    if (attributeNamespace) {
-      node.setAttributeNS(attributeNamespace, attributeName, attributeValue);
-    } else {
-      node.setAttribute(attributeName, attributeValue);
-    }
-  }
-}
-
-function updateChecked(element, props) {
-  const node = element;
-  const checked = props.checked;
-
-  if (checked != null) {
-    setValueForProperty(node, 'checked', checked, false);
-  }
-}
-
-function getToStringValue(value) {
-  switch (typeof value) {
-    case 'boolean':
-    case 'number':
-    case 'object':
-    case 'string':
-    case 'undefined':
-      return value;
-    default:
-      // function, symbol are assigned as empty strings
-      return '';
-  }
-}
-
-function updateWrapper$1(element, props) {
-  const node = element;
-  const value = getToStringValue(props.value);
-  const defaultValue = getToStringValue(props.defaultValue);
-
-  if (value != null) {
-    // Cast `value` to a string to ensure the value is set correctly. While
-    // browsers typically do this as necessary, jsdom doesn't.
-    const newValue = toString(value); // To avoid side effects (such as losing text selection), only set value if changed
-
-    if (newValue !== node.value) {
-      node.value = newValue;
-    }
-
-    if (props.defaultValue == null && node.defaultValue !== newValue) {
-      node.defaultValue = newValue;
-    }
   }
 
-  if (defaultValue != null) {
-    node.defaultValue = toString(defaultValue);
-  }
+  const attributeName = propertyInfo.attributeName;
+
+  node.removeAttribute(attributeName);
 }
 
 function updateProperties(
@@ -3730,9 +3275,7 @@ function commitUpdate(domElement, updatePayload, type, oldProps, newProps) {
     oldProps,
     newProps,
   });
-  // Update the props handle so that we know which props are the ones with
-  // with current event handlers.
-  updateFiberProps(domElement, newProps); // Apply the diff to the DOM node.
+  updateFiberProps(domElement, newProps);
 
   updateProperties(domElement, updatePayload, type, oldProps, newProps);
 }
@@ -3745,12 +3288,9 @@ function commitWork(current, finishedWork) {
       const instance = finishedWork.stateNode;
 
       if (instance != null) {
-        // Commit the work prepared earlier.
-        const newProps = finishedWork.memoizedProps; // For hydration we reuse the update path but we treat the oldProps
-        // as the newProps. The updatePayload will contain the real change in
-        // this case.
+        const newProps = finishedWork.memoizedProps;
         const oldProps = current !== null ? current.memoizedProps : newProps;
-        const type = finishedWork.type; // TODO: Type the updateQueue to be specific to host components.
+        const type = finishedWork.type;
         const updatePayload = finishedWork.updateQueue;
 
         finishedWork.updateQueue = null;
@@ -3772,8 +3312,6 @@ function commitDeletion(finishedRoot, current) {
   });
 
   {
-    // Recursively delete all host nodes from the parent.
-    // Detach refs and call componentWillUnmount() on the whole subtree.
     unmountHostComponents(finishedRoot, current);
   }
 
@@ -3783,11 +3321,7 @@ function commitDeletion(finishedRoot, current) {
 function detachFiber(current) {
   console.log(['detachFiber'], { current });
 
-  const alternate = current.alternate; // Cut off the return pointers to disconnect it from the tree. Ideally, we
-  // should clear the child pointer of the parent alternate to let this
-  // get GC:ed but we don't know which for sure which parent is the current
-  // one so we'll settle for GC:ing the subtree of this child. This child
-  // itself will be GC:ed when the parent updates the next time.
+  const alternate = current.alternate;
 
   current.return = null;
   current.child = null;
@@ -3812,11 +3346,6 @@ function commitNestedUnmounts(finishedRoot, root) {
     root,
   });
 
-  // While we're inside a removed host node we don't want to call
-  // removeChild on the inner nodes because they're removed by the top
-  // call anyway. We also want to call componentWillUnmount on all
-  // composites before this host node is removed from the tree. Therefore
-  // we do an inner loop while we're still inside the host node.
   let node = root;
 
   while (true) {
@@ -3845,10 +3374,12 @@ function commitNestedUnmounts(finishedRoot, root) {
 }
 
 function removeChild(parentInstance, child) {
+  console.log(['removeChildFromContainer'], { parentInstance, child });
   parentInstance.removeChild(child);
 }
 
 function removeChildFromContainer(container, child) {
+  console.log(['removeChildFromContainer'], { container, child });
   container.removeChild(child);
 }
 
@@ -3858,11 +3389,8 @@ function unmountHostComponents(finishedRoot, current) {
     current,
   });
 
-  // We only have the top Fiber that was deleted but we need to recurse down its
-  // children to find all the terminal nodes.
-  let node = current; // Each iteration, currentParent is populated with node's host parent if not
-  // currentParentIsValid.
-  let currentParentIsValid = false; // Note: these two variables *must* always be updated together.
+  let node = current;
+  let currentParentIsValid = false;
   let currentParent;
   let currentParentIsContainer;
 
@@ -3892,14 +3420,13 @@ function unmountHostComponents(finishedRoot, current) {
       currentParentIsValid = true;
     }
 
-    commitNestedUnmounts(finishedRoot, node); // After all the children have unmounted, it is now safe to remove the
-    // node from the tree.
+    commitNestedUnmounts(finishedRoot, node);
 
     if (currentParentIsContainer) {
       removeChildFromContainer(currentParent, node.stateNode);
     } else {
       removeChild(currentParent, node.stateNode);
-    } // Don't visit children because we already visited them.
+    }
 
     if (node === current) {
       return;
@@ -3917,13 +3444,20 @@ function unmountHostComponents(finishedRoot, current) {
     node = node.sibling;
   }
 }
+
 function resetTextContent(domElement) {
+  console.log(['resetTextContent'], { domElement });
   setTextContent(domElement, '');
 }
+
 function commitResetTextContent(current) {
+  console.log(['commitResetTextContent'], { current });
   resetTextContent(current.stateNode);
 }
+
 function commitDetachRef(current) {
+  console.log(['commitDetachRef'], { current });
+
   const currentRef = current.ref;
 
   if (currentRef !== null) {
@@ -3934,10 +3468,10 @@ function commitDetachRef(current) {
     }
   }
 }
+
 function commitMutationEffects(root) {
   console.log(['commitMutationEffects'], { root });
 
-  // TODO: Should probably move the bulk of this function to commitWork.
   while (nextEffect !== null) {
     setCurrentFiber(nextEffect);
 
@@ -3953,30 +3487,21 @@ function commitMutationEffects(root) {
       if (current !== null) {
         commitDetachRef(current);
       }
-    } // The following switch statement is only concerned about placement,
-    // updates, and deletions. To avoid needing to add a case for every possible
-    // bitmap value, we remove the secondary effects from the effect tag and
-    // switch on that value.
+    }
 
     const primaryEffectTag = effectTag & (Placement | Update | Deletion);
 
     switch (primaryEffectTag) {
       case Placement: {
-        commitPlacement(nextEffect); // Clear the "placement" from effect tag so that we know that this is
-        // inserted, before any life-cycles like componentDidMount gets called.
-        // TODO: findDOMNode doesn't rely on this any more but isMounted does
-        // and isMounted is deprecated anyway so we should be able to kill this.
+        commitPlacement(nextEffect);
 
         nextEffect.effectTag &= ~Placement;
 
         break;
       }
       case PlacementAndUpdate: {
-        // Placement
-        commitPlacement(nextEffect); // Clear the "placement" from effect tag so that we know that this is
-        // inserted, before any life-cycles like componentDidMount gets called.
-
-        nextEffect.effectTag &= ~Placement; // Update
+        commitPlacement(nextEffect);
+        nextEffect.effectTag &= ~Placement;
 
         const _current = nextEffect.alternate;
 
@@ -3996,7 +3521,7 @@ function commitMutationEffects(root) {
 
         break;
       }
-    } // TODO: Only record a mutation effect if primaryEffectTag is non-zero.
+    }
 
     recordEffect();
     resetCurrentFiber();
@@ -4016,21 +3541,13 @@ function commitRoot(root) {
   root.finishedWork = null;
 
   if (root === workInProgressRoot) {
-    // We can reset these now that they are finished.
     workInProgressRoot = null;
     workInProgress = null;
-  } // This indicates that the last root we worked on is not the same one that
-  // we're committing now. This most commonly happens when a suspended root
-  // times out.
-  // Get the list of effects.
+  }
 
   let firstEffect;
 
   if (finishedWork.effectTag > PerformedWork) {
-    // A fiber's effect list consists only of its children, not itself. So if
-    // the root has an effect, we need to add it to the end of the list. The
-    // resulting list is the set that would belong to the root's parent, if it
-    // had one; that is, all the effects in the tree including the root.
     if (finishedWork.lastEffect !== null) {
       finishedWork.lastEffect.nextEffect = finishedWork;
       firstEffect = finishedWork.firstEffect;
@@ -4038,16 +3555,10 @@ function commitRoot(root) {
       firstEffect = finishedWork;
     }
   } else {
-    // There is no effect on the root.
     firstEffect = finishedWork.firstEffect;
   }
 
-  ReactCurrentOwner.current = null; // The commit phase is broken into several sub-phases. We do a separate pass
-  // of the effect list for each phase: all mutation effects come before all
-  // layout effects, and so on.
-  // The first phase a "before mutation" phase. We use this phase to read the
-  // state of the host tree right before we mutate it. This is where
-  // getSnapshotBeforeUpdate is called.
+  ReactCurrentOwner.current = null;
 
   prepareForCommit();
   nextEffect = firstEffect;
@@ -4058,25 +3569,19 @@ function commitRoot(root) {
     commitMutationEffects(root);
   } while (nextEffect !== null);
 
-  resetAfterCommit(); // The work-in-progress tree is now the current tree. This must come after
-  // the mutation phase, so that the previous tree is still current during
-  // componentWillUnmount, but before the layout phase, so that the finished
-  // work is current during componentDidMount/Update.
+  resetAfterCommit();
 
-  root.current = finishedWork; // The next phase is the layout phase, where we call effects that read
-  // the host tree after it's been mutated. The idiomatic use case for this is
-  // layout, but class component lifecycles also fire here for legacy reasons.
+  root.current = finishedWork;
 
   nextEffect = firstEffect;
 
-  nextEffect = null; // Tell Scheduler to yield at the end of the frame, so the browser has an
-  // opportunity to paint.
+  nextEffect = null;
 
   return null;
 }
 
 function finishSyncRender(root) {
-  // Set this to null to indicate there's no in-progress render.
+  console.log(['finishSyncRender'], { root });
   workInProgressRoot = null;
   commitRoot(root);
 }
@@ -4084,13 +3589,10 @@ function finishSyncRender(root) {
 function performSyncWorkOnRoot(root) {
   console.log(['performSyncWorkOnRoot'], root);
 
-  // Check if there's expired work on this root.
   if (root !== workInProgressRoot) {
     prepareFreshStack(root);
   }
 
-  // If we have a work-in-progress fiber, it means there's still work to do
-  // in this root.
   if (workInProgress !== null) {
     console.log(['reconsilation start']);
     workLoopSync();
@@ -4119,8 +3621,9 @@ let isFlushingSyncQueue = false;
 let immediateQueueCallbackNode = null;
 
 function flushSyncCallbackQueueImpl() {
+  console.log(['flushSyncCallbackQueueImpl']);
+
   if (!isFlushingSyncQueue && syncQueue !== null) {
-    // Prevent re-entrancy.
     isFlushingSyncQueue = true;
 
     let i = 0;
@@ -4139,10 +3642,9 @@ function flushSyncCallbackQueueImpl() {
 
       syncQueue = null;
     } catch (error) {
-      // If something throws, leave the remaining callbacks on the queue.
       if (syncQueue !== null) {
         syncQueue = syncQueue.slice(i + 1);
-      } // Resume flushing in the next tick
+      }
 
       Scheduler_scheduleCallback(flushSyncCallbackQueue);
 
@@ -4172,11 +3674,6 @@ function scheduleWork(fiber) {
 
   ensureRootIsScheduled(root);
 
-  // Flush the synchronous work now, unless we're already working or inside
-  // a batch. This is intentionally inside scheduleUpdateOnFiber instead of
-  // scheduleCallbackForFiber to preserve the ability to schedule a callback
-  // without immediately flushing it. We only do this for user-initiated
-  // updates, to preserve historical behavior of legacy mode.
   flushSyncCallbackQueue();
 }
 
@@ -4202,23 +3699,18 @@ function render(element, container) {
 
   return null;
 }
+
 const namesToPlugins = {};
 let eventPluginOrder = null;
-/**
- * Ordered list of injected plugins.
- */
-
 var plugins = [];
-/**
- * Publishes an event so that it can be dispatched by the supplied plugin.
- *
- * @param {object} dispatchConfig Dispatch configuration for the event.
- * @param {object} PluginModule Plugin publishing the event.
- * @return {boolean} True if the event was successfully published.
- * @private
- */
-var eventNameDispatchConfigs = {};
+const eventNameDispatchConfigs = {};
+
 function publishEventForPlugin(dispatchConfig, pluginModule, eventName) {
+  console.log(['publishEventForPlugin'], {
+    dispatchConfig,
+    pluginModule,
+    eventName,
+  });
   eventNameDispatchConfigs[eventName] = dispatchConfig;
 
   const phasedRegistrationNames = dispatchConfig.phasedRegistrationNames;
@@ -4249,8 +3741,10 @@ function publishEventForPlugin(dispatchConfig, pluginModule, eventName) {
 
   return false;
 }
+
 function recomputePluginOrdering() {
-  console.log(['recomputePluginOrdering'])
+  console.log(['recomputePluginOrdering']);
+
   if (!eventPluginOrder) {
     // Wait until an `eventPluginOrder` is injected.
     return;
@@ -4273,12 +3767,14 @@ function recomputePluginOrdering() {
         publishedEvents[eventName],
         pluginModule,
         eventName,
-      )
+      );
     }
   }
 }
 
 function injectEventPluginsByName(injectedNamesToPlugins) {
+  console.log(['injectEventPluginsByName'], { injectedNamesToPlugins });
+
   let isOrderingDirty = false;
 
   for (const pluginName in injectedNamesToPlugins) {
@@ -4301,16 +3797,24 @@ function injectEventPluginsByName(injectedNamesToPlugins) {
     recomputePluginOrdering();
   }
 }
+
 const simpleEventPluginEventTypes = {};
 const topLevelEventsToDispatchConfig = new Map();
+
 function SyntheticEvent(
   dispatchConfig,
   targetInst,
   nativeEvent,
   nativeEventTarget,
 ) {
+  console.log(['SyntheticEvent'], {
+    dispatchConfig,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+  });
+
   {
-    // these have a getter/setter for warnings
     delete this.nativeEvent;
     delete this.preventDefault;
     delete this.stopPropagation;
@@ -4330,7 +3834,7 @@ function SyntheticEvent(
     }
 
     {
-      delete this[propName]; // this has a getter/setter for warnings
+      delete this[propName];
     }
 
     const normalize = Interface[propName];
@@ -4348,7 +3852,15 @@ function SyntheticEvent(
 
   return this;
 }
+
 function getPooledEvent(dispatchConfig, targetInst, nativeEvent, nativeInst) {
+  console.log(['getPooledEvent'], {
+    dispatchConfig,
+    targetInst,
+    nativeEvent,
+    nativeInst,
+  });
+
   const EventConstructor = this;
 
   if (EventConstructor.eventPool.length) {
@@ -4372,20 +3884,29 @@ function getPooledEvent(dispatchConfig, targetInst, nativeEvent, nativeInst) {
     nativeInst,
   );
 }
+
 const EVENT_POOL_SIZE = 10;
+
 function releasePooledEvent(event) {
+  console.log(['releasePooledEvent'], { event });
+
   const EventConstructor = this;
 
   if (EventConstructor.eventPool.length < EVENT_POOL_SIZE) {
     EventConstructor.eventPool.push(event);
   }
 }
+
 function addEventPoolingTo(EventConstructor) {
+  console.log(['addEventPoolingTo'], { EventConstructor });
   EventConstructor.eventPool = [];
   EventConstructor.getPooled = getPooledEvent;
   EventConstructor.release = releasePooledEvent;
 }
+
 SyntheticEvent.extend = function (Interface) {
+  console.log(['SyntheticEvent.extend'], { Interface });
+
   const Super = this;
   const E = function () {};
 
@@ -4407,6 +3928,7 @@ SyntheticEvent.extend = function (Interface) {
 
   return Class;
 };
+
 const SyntheticUIEvent = SyntheticEvent.extend({
   view: null,
   detail: null,
@@ -4425,13 +3947,11 @@ const SyntheticMouseEvent = SyntheticUIEvent.extend({
   button: null,
   buttons: null,
 });
+
 function getParent(inst) {
+  console.log(['getParent'], { inst });
   do {
-    inst = inst.return; // TODO: If this is a HostRoot we might want to bail out.
-    // That is depending on if we want nested subtrees (layers) to bubble
-    // events to their parent. We could also go through parentNode on the
-    // host node but that wouldn't work for React Native and doesn't let us
-    // do the portal feature.
+    inst = inst.return;
   } while (inst && inst.tag !== HostComponent);
 
   if (inst) {
@@ -4440,7 +3960,10 @@ function getParent(inst) {
 
   return null;
 }
+
 function traverseTwoPhase(inst, fn, arg) {
+  console.log(['traverseTwoPhase'], { inst, fn, arg });
+
   const path = [];
 
   while (inst) {
@@ -4458,85 +3981,59 @@ function traverseTwoPhase(inst, fn, arg) {
     fn(path[i], 'bubbled', arg);
   }
 }
+
 let getFiberCurrentPropsFromNode = null;
 let getInstanceFromNode = null;
 let getNodeFromInstance = null;
-/**
- * Given a DOM node, return the ReactDOMComponent or ReactDOMTextComponent
- * instance, or null if the node was not rendered by this React.
- */
-
-function getInstanceFromNode$1(node) {
-  console.log(['getInstanceFromNode$1']);
-
-  const inst =
-    node[internalInstanceKey] || node[internalContainerInstanceKey];
-
-  if (inst) {
-    if (
-      inst.tag === HostComponent ||
-      inst.tag === HostText ||
-      inst.tag === HostRoot
-    ) {
-      return inst;
-    } else {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Given a ReactDOMComponent or ReactDOMTextComponent, return the corresponding
- * DOM node.
- */
 
 function getNodeFromInstance$1(inst) {
+  console.log(['getNodeFromInstance$1'], { inst });
+
   if (inst.tag === HostComponent || inst.tag === HostText) {
-    // In Fiber this, is just the state node right now. We assume it will be
-    // a host component or host text.
     return inst.stateNode;
   }
 }
 
 function getFiberCurrentPropsFromNode$1(node) {
+  console.log(['getFiberCurrentPropsFromNode$1'], { node });
+
   return node[internalEventHandlersKey] || null;
 }
+
 function setComponentTree(
   getFiberCurrentPropsFromNodeImpl,
   getInstanceFromNodeImpl,
   getNodeFromInstanceImpl,
 ) {
+  console.log(['setComponentTree'], {
+    getFiberCurrentPropsFromNodeImpl,
+    getInstanceFromNodeImpl,
+    getNodeFromInstanceImpl,
+  });
   getFiberCurrentPropsFromNode = getFiberCurrentPropsFromNodeImpl;
-  getInstanceFromNode = getInstanceFromNodeImpl;
+  getInstanceFromNode = null;
   getNodeFromInstance = getNodeFromInstanceImpl;
 }
+
 setComponentTree(
   getFiberCurrentPropsFromNode$1,
-  getInstanceFromNode$1,
+  () => {},
   getNodeFromInstance$1,
 );
-/**
- * @param {object} inst The instance, which is the source of events.
- * @param {string} registrationName Name of listener (e.g. `onClick`).
- * @return {?function} The stored callback.
- */
 
 function getListener(inst, registrationName) {
-  let listener; // TODO: shouldPreventMouseEvent is DOM-specific and definitely should not
-  // live here; needs to be moved to a better place soon
+  console.log(['getListener'], { inst, registrationName });
+
+  let listener;
   const stateNode = inst.stateNode;
 
   if (!stateNode) {
-    // Work in progress (ex: onload events in incremental mode).
     return null;
   }
 
   const props = getFiberCurrentPropsFromNode(stateNode);
 
   if (!props) {
-    // Work in progress.
     return null;
   }
 
@@ -4544,36 +4041,18 @@ function getListener(inst, registrationName) {
 
   return listener;
 }
-/**
- * Some event types have a notion of different registration names for different
- * "phases" of propagation. This finds listeners by a given phase.
- */
+
 function listenerAtPhase(inst, event, propagationPhase) {
+  console.log(['listenerAtPhase'], { inst, event, propagationPhase });
+
   const registrationName =
     event.dispatchConfig.phasedRegistrationNames[propagationPhase];
 
   return getListener(inst, registrationName);
 }
 
-/**
- * A small set of propagation patterns, each of which will accept a small amount
- * of information, and generate a set of "dispatch ready event objects" - which
- * are sets of events that have already been annotated with a set of dispatched
- * listener functions/ids. The API is designed this way to discourage these
- * propagation strategies from actually executing the dispatches, since we
- * always want to collect the entire set of dispatches before executing even a
- * single one.
- */
-
-/**
- * Tags a `SyntheticEvent` with dispatched listeners. Creating this function
- * here, allows us to not have to bind or create functions for each event.
- * Mutating the event's members allows us to not have to create a wrapping
- * "dispatch" object that pairs the event with the listener.
- */
-
 function accumulateDirectionalDispatches(inst, phase, event) {
-  console.log(['accumulateDirectionalDispatches'])
+  console.log(['accumulateDirectionalDispatches']);
 
   const listener = listenerAtPhase(inst, event, phase);
 
@@ -4585,28 +4064,20 @@ function accumulateDirectionalDispatches(inst, phase, event) {
     event._dispatchInstances = accumulateInto(event._dispatchInstances, inst);
   }
 }
-/**
- * Collect dispatches (must be entirely collected before dispatching - see unit
- * tests). Lazily allocate the array to conserve memory.  We must loop through
- * each event and perform the traversal for each one. We cannot perform a
- * single traversal for the entire collection of events because each event may
- * have a different target.
- */
 
 function accumulateTwoPhaseDispatchesSingle(event) {
+  console.log(['accumulateTwoPhaseDispatchesSingle'], { event });
+
   if (event && event.dispatchConfig.phasedRegistrationNames) {
-    traverseTwoPhase(
-      event._targetInst,
-      accumulateDirectionalDispatches,
-      event,
-    );
+    traverseTwoPhase(event._targetInst, accumulateDirectionalDispatches, event);
   }
 }
 
 function accumulateTwoPhaseDispatches(events) {
-  console.log(['accumulateTwoPhaseDispatches'], { events })
+  console.log(['accumulateTwoPhaseDispatches'], { events });
   forEachAccumulated(events, accumulateTwoPhaseDispatchesSingle);
 }
+
 const SimpleEventPlugin = {
   eventTypes: simpleEventPluginEventTypes,
   extractEvents: function (
@@ -4631,43 +4102,28 @@ const SimpleEventPlugin = {
       nativeEvent,
       nativeEventTarget,
     );
+
     accumulateTwoPhaseDispatches(event);
 
     return event;
   },
 };
+
 function injectEventPluginOrder(injectedEventPluginOrder) {
+  console.log(['injectEventPluginOrder'], { injectedEventPluginOrder });
   eventPluginOrder = Array.prototype.slice.call(injectedEventPluginOrder);
   recomputePluginOrdering();
 }
-/**
- * Specifies a deterministic ordering of `EventPlugin`s. A convenient way to
- * reason about plugins, without having to package every one of them. This
- * is better than having plugins be ordered in the same order that they
- * are injected because that ordering would be influenced by the packaging order.
- * `ResponderEventPlugin` must occur before `SimpleEventPlugin` so that
- * preventing default on events is convenient in `SimpleEventPlugin` handlers.
- */
 
-const DOMEventPluginOrder = [
-  'SimpleEventPlugin',
-];
+const DOMEventPluginOrder = ['SimpleEventPlugin'];
+const eventPriorities = new Map();
 
-const eventPriorities = new Map(); // We store most of the events in this module in pairs of two strings so we can re-use
-// the code required to apply the same logic for event prioritization and that of the
-// SimpleEventPlugin. This complicates things slightly, but the aim is to reduce code
-// duplication (for which there would be quite a bit). For the events that are not needed
-// for the SimpleEventPlugin (otherDiscreteEvents) we process them separately as an
-// array of top level events.
-// Lastly, we ignore prettier so we can keep the formatting sane.
-// prettier-ignore
 function processSimpleEventPluginPairsByPriority(eventTypes, priority) {
-  // As the event types are in pairs of two, we need to iterate
-  // through in twos. The events are in pairs of two to save code
-  // and improve init perf of processing this array, as it will
-  // result in far fewer object allocations and property accesses
-  // if we only use three arrays to process all the categories of
-  // instead of tuples.
+  console.log(['processSimpleEventPluginPairsByPriority'], {
+    eventTypes,
+    priority,
+  });
+
   for (let i = 0; i < eventTypes.length; i += 2) {
     const topEvent = eventTypes[i];
     const event = eventTypes[i + 1];
@@ -4687,10 +4143,15 @@ function processSimpleEventPluginPairsByPriority(eventTypes, priority) {
     simpleEventPluginEventTypes[event] = config;
   }
 }
+
 const DiscreteEvent = 0;
+
 function unsafeCastStringToDOMTopLevelType(topLevelType) {
+  console.log(['unsafeCastStringToDOMTopLevelType'], { topLevelType });
+
   return topLevelType;
 }
+
 const TOP_CLICK = unsafeCastStringToDOMTopLevelType('click');
 const discreteEventPairsForSimpleEventPlugin = [TOP_CLICK, 'click'];
 try {
@@ -4703,7 +4164,7 @@ try {
   });
   injectEventPluginOrder(DOMEventPluginOrder);
 } catch (e) {
-  console.error(['error'], e.toString())
+  console.error(['error'], e.toString());
 }
 const OwnReact = {
   createElement,
