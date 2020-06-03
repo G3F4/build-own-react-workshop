@@ -1,7 +1,7 @@
 import React from 'react';
 
 function GrowingButton({ label, visible }) {
-  const [buttonSize, setButtonSize] = React.useState(10);
+  const [buttonSize, setButtonSize] = React.useState(20);
 
   if (!visible) {
     return null;
@@ -22,11 +22,23 @@ function App() {
   const [visible, setVisible] = React.useState(true);
 
   function disappear() {
+    console.log(['disappear']);
     setVisible(() => false);
   }
 
   function appear() {
+    console.log(['appear']);
     setVisible(() => true);
+  }
+
+  function increase() {
+    console.log(['increase']);
+    setCount((c) => c + 1);
+  }
+
+  function decrease() {
+    console.log(['decrease']);
+    setCount((c) => c - 1);
   }
 
   return (
@@ -35,12 +47,8 @@ function App() {
       <div>
         <div>
           <span>{count.toString()}</span>
-          <button onClick={() => setCount((c) => c + 1)}>
-            increase counter
-          </button>
-          <button onClick={() => setCount((c) => c - 1)}>
-            decrease counter
-          </button>
+          <button onClick={increase}>increase counter</button>
+          <button onClick={decrease}>decrease counter</button>
         </div>
         <GrowingButton label="Click it like it's hot!" visible={visible} />
         <button onClick={visible ? disappear : appear}>{`${

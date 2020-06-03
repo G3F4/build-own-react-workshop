@@ -1,6 +1,7 @@
 {
   "scripts": {
     "dev": "webpack-dev-server --open --mode development",
+    "dev2": "webpack-dev-server --config webpack.config2.js --open --mode development",
     "start": "http-server dist -c-1",
     "build": "webpack",
     "lint": "eslint ./src ./lib"
