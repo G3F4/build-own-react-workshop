@@ -1,20 +1,43 @@
 const topLevelFunctionsCallRegister = {};
-const missingNamesInRegister = []
+const missingNamesInRegister = [];
 const topLevelFunctionsRegister = [];
 
 window.topLevelFunctionsCallRegister = topLevelFunctionsCallRegister;
 window.missingNamesInRegister = missingNamesInRegister;
 window.topLevelFunctionsRegister = topLevelFunctionsRegister;
 
-window.noCalls = function() {
-  return topLevelFunctionsRegister.filter(key => !topLevelFunctionsCallRegister[key])
+window.noCalls = function () {
+  return topLevelFunctionsRegister.filter(
+    (key) => !topLevelFunctionsCallRegister[key],
+  );
+};
+
+function logFuncUsage(...args) {
+  const [[name]] = args;
+
+  if (topLevelFunctionsRegister.includes(name)) {
+    if (topLevelFunctionsCallRegister[name]) {
+      topLevelFunctionsCallRegister[name]++;
+    } else {
+      topLevelFunctionsCallRegister[name] = 1;
+    }
+  } else {
+    missingNamesInRegister.push(name);
+
+    if (topLevelFunctionsCallRegister[name]) {
+      topLevelFunctionsCallRegister[name]++;
+    } else {
+      topLevelFunctionsCallRegister[name] = 1;
+    }
+  }
+
+  // console.log(...args);
 }
 
 const NO_CONTEXT = {};
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 const MATH_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
-const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const COMMENT_NODE = 8;
 const DOCUMENT_NODE = 9;
@@ -60,17 +83,117 @@ let HooksDispatcherOnUpdateInDEV = null;
 const InvalidNestedHooksDispatcherOnMountInDEV = null;
 const InvalidNestedHooksDispatcherOnUpdateInDEV = null;
 let currentHookNameInDev = null;
+const LegacyRoot = 0;
+const DiscreteEvent = 0;
+let hasForceUpdate = false;
+let currentlyProcessingQueue;
+let isRendering = false;
+const ContextOnlyDispatcher = {
+  useState: null,
+};
+const EVENT_POOL_SIZE = 10;
+let _enabled = true;
+const DOMEventPluginOrder = ['SimpleEventPlugin'];
+const eventPriorities = new Map();
+const randomKey = Math.random().toString(36).slice(2);
+const internalInstanceKey = '__reactInternalInstance$' + randomKey;
+const internalEventHandlersKey = '__reactEventHandlers$' + randomKey;
+const REACT_ELEMENT_TYPE = Symbol.for('react.element');
+const PossiblyWeakMap = typeof WeakMap === 'function' ? WeakMap : Map; // prettier-ignore
+const elementListenerMap = new PossiblyWeakMap();
+let getFiberCurrentPropsFromNode = null;
+let getInstanceFromNode = null;
+let getNodeFromInstance = null;
+const namesToPlugins = {};
+let eventPluginOrder = null;
+const plugins = [];
+const eventNameDispatchConfigs = {};
+let eventsEnabled = null;
+let selectionInformation = null;
+const valueStack = [];
+const fiberStack = [];
+let index = -1;
+let syncQueue = null;
+let effectCountInCurrentCommit = 0;
+const simpleEventPluginEventTypes = {};
+const topLevelEventsToDispatchConfig = new Map();
+let workInProgressRoot = null; // The root we're working on
+let workInProgress = null; // The fiber we're working on
+const PLUGIN_EVENT_SYSTEM = 1;
+const registrationNameDependencies = {};
+const CALLBACK_BOOKKEEPING_POOL_SIZE = 10;
+const callbackBookkeepingPool = [];
+const IS_FIRST_ANCESTOR = 1 << 6;
+let eventQueue = null;
+const registrationNameModules = {};
+const HTML$1 = '__html';
+const STYLE = 'style';
+const isArray$1 = Array.isArray;
+let performUnitOfWorkCounter = 0;
+let current = null;
+let nextEffect = null;
+const DANGEROUSLY_SET_INNER_HTML = 'dangerouslySetInnerHTML';
+const AUTOFOCUS = 'autoFocus';
+const CHILDREN = 'children';
+const isUnitlessNumber = {
+  animationIterationCount: true,
+  borderImageOutset: true,
+  borderImageSlice: true,
+  borderImageWidth: true,
+  boxFlex: true,
+  boxFlexGroup: true,
+  boxOrdinalGroup: true,
+  columnCount: true,
+  columns: true,
+  flex: true,
+  flexGrow: true,
+  flexPositive: true,
+  flexShrink: true,
+  flexNegative: true,
+  flexOrder: true,
+  gridArea: true,
+  gridRow: true,
+  gridRowEnd: true,
+  gridRowSpan: true,
+  gridRowStart: true,
+  gridColumn: true,
+  gridColumnEnd: true,
+  gridColumnSpan: true,
+  gridColumnStart: true,
+  fontWeight: true,
+  lineClamp: true,
+  lineHeight: true,
+  opacity: true,
+  order: true,
+  orphans: true,
+  tabSize: true,
+  widows: true,
+  zIndex: true,
+  zoom: true,
+  fillOpacity: true,
+  floodOpacity: true,
+  stopOpacity: true,
+  strokeDasharray: true,
+  strokeDashoffset: true,
+  strokeMiterlimit: true,
+  strokeOpacity: true,
+  strokeWidth: true,
+};
+let isFlushingSyncQueue = false;
+let immediateQueueCallbackNode = null;
+let isBatchingEventUpdates = false;
 
-topLevelFunctionsRegister.push('useState')
+topLevelFunctionsRegister.push('useState');
+
 function useState(initialState) {
   logFuncUsage(['useState'], { initialState });
 
   return ReactCurrentDispatcher.current.useState(initialState);
 }
 
-const REACT_ELEMENT_TYPE = Symbol.for('react.element');
-topLevelFunctionsRegister.push('ReactElement')
-const ReactElement = function (type, props) {
+topLevelFunctionsRegister.push('ReactElement');
+
+function ReactElement(type, props) {
   logFuncUsage(['ReactElement'], { type, props });
 
   return {
@@ -78,8 +201,10 @@ const ReactElement = function (type, props) {
     type: type,
     props: props,
   };
-};
-topLevelFunctionsRegister.push('createElement')
+}
+
+topLevelFunctionsRegister.push('createElement');
+
 function createElement(type, config, children) {
   logFuncUsage(['createElement'], { type, config, children });
 
@@ -108,7 +233,9 @@ function createElement(type, config, children) {
 
   return ReactElement(type, props);
 }
-topLevelFunctionsRegister.push('FiberNode')
+
+topLevelFunctionsRegister.push('FiberNode');
+
 function FiberNode(tag, pendingProps, key) {
   logFuncUsage(['FiberNode'], { tag, pendingProps, key });
   this.tag = tag;
@@ -132,14 +259,17 @@ function FiberNode(tag, pendingProps, key) {
   this.lastEffect = null;
   this.alternate = null;
 }
-topLevelFunctionsRegister.push('createFiber')
-const createFiber = function (tag, pendingProps, key) {
+
+topLevelFunctionsRegister.push('createFiber');
+
+function createFiber(tag, pendingProps, key) {
   logFuncUsage(['createFiber'], { tag, pendingProps, key });
 
   return new FiberNode(tag, pendingProps, key);
-};
-const LegacyRoot = 0;
-topLevelFunctionsRegister.push('FiberRootNode')
+}
+
+topLevelFunctionsRegister.push('FiberRootNode');
+
 function FiberRootNode(containerInfo) {
   logFuncUsage(['FiberRootNode'], { containerInfo });
   this.tag = LegacyRoot;
@@ -147,13 +277,17 @@ function FiberRootNode(containerInfo) {
   this.containerInfo = containerInfo;
   this.finishedWork = null;
 }
-topLevelFunctionsRegister.push('createHostRootFiber')
+
+topLevelFunctionsRegister.push('createHostRootFiber');
+
 function createHostRootFiber() {
   logFuncUsage(['createHostRootFiber']);
 
   return createFiber(HostRoot, null, null);
 }
-topLevelFunctionsRegister.push('initializeUpdateQueue')
+
+topLevelFunctionsRegister.push('initializeUpdateQueue');
+
 function initializeUpdateQueue(fiber) {
   logFuncUsage(['initializeUpdateQueue'], { fiber });
   fiber.updateQueue = {
@@ -165,7 +299,9 @@ function initializeUpdateQueue(fiber) {
     effects: null,
   };
 }
-topLevelFunctionsRegister.push('createFiberRoot')
+
+topLevelFunctionsRegister.push('createFiberRoot');
+
 function createFiberRoot(containerInfo) {
   logFuncUsage(['createFiberRoot'], { containerInfo });
 
@@ -178,7 +314,9 @@ function createFiberRoot(containerInfo) {
 
   return root;
 }
-topLevelFunctionsRegister.push('createUpdate')
+
+topLevelFunctionsRegister.push('createUpdate');
+
 function createUpdate() {
   logFuncUsage(['createUpdate']);
 
@@ -193,7 +331,9 @@ function createUpdate() {
 
   return update;
 }
-topLevelFunctionsRegister.push('enqueueUpdate')
+
+topLevelFunctionsRegister.push('enqueueUpdate');
+
 function enqueueUpdate(fiber, update) {
   logFuncUsage(['enqueueUpdate'], { fiber, update });
 
@@ -217,7 +357,9 @@ function enqueueUpdate(fiber, update) {
 
   sharedQueue.pending = update;
 }
-topLevelFunctionsRegister.push('markUpdateTimeFromFiberToRoot')
+
+topLevelFunctionsRegister.push('markUpdateTimeFromFiberToRoot');
+
 function markUpdateTimeFromFiberToRoot(fiber) {
   logFuncUsage(['markUpdateTimeFromFiberToRoot'], { fiber });
 
@@ -244,8 +386,8 @@ function markUpdateTimeFromFiberToRoot(fiber) {
   return root;
 }
 
-let syncQueue = null;
-topLevelFunctionsRegister.push('scheduleSyncCallback')
+topLevelFunctionsRegister.push('scheduleSyncCallback');
+
 function scheduleSyncCallback(callback) {
   logFuncUsage(['scheduleSyncCallback'], { callback });
 
@@ -256,9 +398,8 @@ function scheduleSyncCallback(callback) {
   }
 }
 
-let workInProgressRoot = null; // The root we're working on
-let workInProgress = null; // The fiber we're working on
-topLevelFunctionsRegister.push('createWorkInProgress')
+topLevelFunctionsRegister.push('createWorkInProgress');
+
 function createWorkInProgress(current, pendingProps) {
   logFuncUsage(['createWorkInProgress'], { current, pendingProps });
 
@@ -288,7 +429,9 @@ function createWorkInProgress(current, pendingProps) {
 
   return workInProgress;
 }
-topLevelFunctionsRegister.push('prepareFreshStack')
+
+topLevelFunctionsRegister.push('prepareFreshStack');
+
 function prepareFreshStack(root) {
   logFuncUsage(['prepareFreshStack'], { root });
   root.finishedWork = null;
@@ -297,10 +440,8 @@ function prepareFreshStack(root) {
   workInProgress = createWorkInProgress(root.current, null);
 }
 
-const valueStack = [];
-const fiberStack = [];
-let index = -1;
-topLevelFunctionsRegister.push('pop')
+topLevelFunctionsRegister.push('pop');
+
 function pop(cursor) {
   logFuncUsage(['pop'], { cursor });
   cursor.current = valueStack[index];
@@ -312,7 +453,9 @@ function pop(cursor) {
 
   index--;
 }
-topLevelFunctionsRegister.push('push')
+
+topLevelFunctionsRegister.push('push');
+
 function push(cursor, value, fiber) {
   logFuncUsage(['push'], { cursor, value, fiber });
   index++;
@@ -324,7 +467,9 @@ function push(cursor, value, fiber) {
 
   cursor.current = value;
 }
-topLevelFunctionsRegister.push('getIntrinsicNamespace')
+
+topLevelFunctionsRegister.push('getIntrinsicNamespace');
+
 function getIntrinsicNamespace(type) {
   logFuncUsage(['getIntrinsicNamespace'], { type });
 
@@ -339,7 +484,9 @@ function getIntrinsicNamespace(type) {
 }
 
 const contextStackCursor$1 = createCursor(NO_CONTEXT);
-topLevelFunctionsRegister.push('getChildNamespace')
+
+topLevelFunctionsRegister.push('getChildNamespace');
+
 function getChildNamespace(parentNamespace, type) {
   logFuncUsage(['getChildNamespace'], { parentNamespace, type });
 
@@ -353,7 +500,9 @@ function getChildNamespace(parentNamespace, type) {
 
   return parentNamespace;
 }
-topLevelFunctionsRegister.push('getRootHostContext')
+
+topLevelFunctionsRegister.push('getRootHostContext');
+
 function getRootHostContext(rootContainerInstance) {
   logFuncUsage(['getRootHostContext'], { rootContainerInstance });
 
@@ -392,6 +541,8 @@ function getRootHostContext(rootContainerInstance) {
   };
 }
 
+topLevelFunctionsRegister.push('pushHostContainer');
+
 function pushHostContainer(fiber, nextRootInstance) {
   logFuncUsage(['pushHostContainer'], { fiber, nextRootInstance });
   push(rootInstanceStackCursor, nextRootInstance, fiber);
@@ -401,7 +552,9 @@ function pushHostContainer(fiber, nextRootInstance) {
   pop(contextStackCursor$1, fiber);
   push(contextStackCursor$1, nextRootContext, fiber);
 }
-topLevelFunctionsRegister.push('getStateFromUpdate')
+
+topLevelFunctionsRegister.push('getStateFromUpdate');
+
 function cloneUpdateQueue(current, workInProgress) {
   logFuncUsage(['getStateFromUpdate'], { current, workInProgress });
 
@@ -420,8 +573,8 @@ function cloneUpdateQueue(current, workInProgress) {
   }
 }
 
-let hasForceUpdate = false;
-topLevelFunctionsRegister.push('getStateFromUpdate')
+topLevelFunctionsRegister.push('getStateFromUpdate');
+
 function getStateFromUpdate(
   workInProgress,
   queue,
@@ -493,8 +646,8 @@ function getStateFromUpdate(
   return prevState;
 }
 
-let currentlyProcessingQueue;
-topLevelFunctionsRegister.push('processUpdateQueue')
+topLevelFunctionsRegister.push('processUpdateQueue');
+
 function processUpdateQueue(workInProgress, props, instance) {
   logFuncUsage(['processUpdateQueue'], { workInProgress, props, instance });
 
@@ -628,7 +781,9 @@ function processUpdateQueue(workInProgress, props, instance) {
 
 const reconcileChildFibers = ChildReconciler(true);
 const mountChildFibers = ChildReconciler(false);
-topLevelFunctionsRegister.push('reconcileChildren')
+
+topLevelFunctionsRegister.push('reconcileChildren');
+
 function reconcileChildren(current, workInProgress, nextChildren) {
   logFuncUsage(['reconcileChildren'], {
     current,
@@ -646,7 +801,9 @@ function reconcileChildren(current, workInProgress, nextChildren) {
     );
   }
 }
-topLevelFunctionsRegister.push('updateHostRoot')
+
+topLevelFunctionsRegister.push('updateHostRoot');
+
 function updateHostRoot(current, workInProgress) {
   logFuncUsage(['updateHostRoot'], {
     current,
@@ -667,8 +824,8 @@ function updateHostRoot(current, workInProgress) {
   return workInProgress.child;
 }
 
-let isRendering = false;
-topLevelFunctionsRegister.push('mountWorkInProgressHook')
+topLevelFunctionsRegister.push('mountWorkInProgressHook');
+
 function mountWorkInProgressHook() {
   logFuncUsage(['mountWorkInProgressHook']);
 
@@ -688,7 +845,9 @@ function mountWorkInProgressHook() {
 
   return workInProgressHook;
 }
-topLevelFunctionsRegister.push('dispatchAction')
+
+topLevelFunctionsRegister.push('dispatchAction');
+
 function dispatchAction(fiber, queue, action) {
   logFuncUsage(['dispatchAction'], { fiber, queue, action });
 
@@ -724,9 +883,11 @@ function dispatchAction(fiber, queue, action) {
 
   scheduleWork(fiber);
 }
-topLevelFunctionsRegister.push('mountState')
+
+topLevelFunctionsRegister.push('mountState');
+
 function mountState(initialState) {
-  logFuncUsage(['mountState.useState'], { initialState });
+  logFuncUsage(['mountState'], { initialState });
 
   const hook = mountWorkInProgressHook();
 
@@ -752,7 +913,7 @@ function mountState(initialState) {
 }
 
 {
-  topLevelFunctionsRegister.push('HooksDispatcherOnMountInDEV.useState')
+  topLevelFunctionsRegister.push('HooksDispatcherOnMountInDEV.useState');
   HooksDispatcherOnMountInDEV = {
     useState: function (initialState) {
       logFuncUsage(['HooksDispatcherOnMountInDEV.useState'], { initialState });
@@ -769,7 +930,7 @@ function mountState(initialState) {
       }
     },
   };
-  topLevelFunctionsRegister.push('HooksDispatcherOnUpdateInDEV.useState')
+  topLevelFunctionsRegister.push('HooksDispatcherOnUpdateInDEV.useState');
   HooksDispatcherOnUpdateInDEV = {
     useState: function (initialState) {
       logFuncUsage(['HooksDispatcherOnUpdateInDEV.useState'], { initialState });
@@ -787,7 +948,9 @@ function mountState(initialState) {
     },
   };
 }
-topLevelFunctionsRegister.push('updateWorkInProgressHook')
+
+topLevelFunctionsRegister.push('updateWorkInProgressHook');
+
 function updateWorkInProgressHook() {
   logFuncUsage(['updateWorkInProgressHook']);
 
@@ -836,7 +999,9 @@ function updateWorkInProgressHook() {
 
   return workInProgressHook;
 }
-topLevelFunctionsRegister.push('updateReducer')
+
+topLevelFunctionsRegister.push('updateReducer');
+
 function updateReducer(reducer) {
   logFuncUsage(['updateReducer'], { reducer });
 
@@ -876,18 +1041,22 @@ function updateReducer(reducer) {
   return [hook.memoizedState, dispatch];
 }
 
+topLevelFunctionsRegister.push('updateState');
+
 function updateState() {
+  logFuncUsage(['updateState']);
+
   return updateReducer(basicStateReducer);
 }
 
 function basicStateReducer(state, action) {
+  logFuncUsage(['basicStateReducer'], { state, action });
+
   return typeof action === 'function' ? action(state) : action;
 }
 
-const ContextOnlyDispatcher = {
-  useState: null,
-};
-topLevelFunctionsRegister.push('renderWithHooks')
+topLevelFunctionsRegister.push('renderWithHooks');
+
 function renderWithHooks(current, workInProgress, Component, props, secondArg) {
   logFuncUsage(['renderWithHooks'], {
     current,
@@ -923,7 +1092,9 @@ function renderWithHooks(current, workInProgress, Component, props, secondArg) {
 
   return children;
 }
-topLevelFunctionsRegister.push('mountIndeterminateComponent')
+
+topLevelFunctionsRegister.push('mountIndeterminateComponent');
+
 function mountIndeterminateComponent(_current, workInProgress, Component) {
   logFuncUsage(['mountIndeterminateComponent'], {
     _current,
@@ -945,7 +1116,9 @@ function mountIndeterminateComponent(_current, workInProgress, Component) {
 
   return workInProgress.child;
 }
-topLevelFunctionsRegister.push('updateHostComponent')
+
+topLevelFunctionsRegister.push('updateHostComponent');
+
 function updateHostComponent(current, workInProgress) {
   logFuncUsage(['updateHostComponent'], { current, workInProgress });
   reconcileChildren(
@@ -956,26 +1129,9 @@ function updateHostComponent(current, workInProgress) {
 
   return workInProgress.child;
 }
-topLevelFunctionsRegister.push('resolveDefaultProps')
-function resolveDefaultProps(Component, baseProps) {
-  logFuncUsage(['resolveDefaultProps'], { Component, baseProps });
 
-  if (Component && Component.defaultProps) {
-    const props = Object.assign({}, baseProps);
-    const defaultProps = Component.defaultProps;
+topLevelFunctionsRegister.push('updateFunctionComponent');
 
-    for (const propName in defaultProps) {
-      if (props[propName] === undefined) {
-        props[propName] = defaultProps[propName];
-      }
-    }
-
-    return props;
-  }
-
-  return baseProps;
-}
-topLevelFunctionsRegister.push('updateFunctionComponent')
 function updateFunctionComponent(
   current,
   workInProgress,
@@ -1007,7 +1163,9 @@ function updateFunctionComponent(
 
   return workInProgress.child;
 }
-topLevelFunctionsRegister.push('beginWork')
+
+topLevelFunctionsRegister.push('beginWork');
+
 function beginWork(current, workInProgress) {
   logFuncUsage(['beginWork'], { current, workInProgress });
 
@@ -1021,17 +1179,12 @@ function beginWork(current, workInProgress) {
     }
     case FunctionComponent: {
       const _Component = workInProgress.type;
-      const unresolvedProps = workInProgress.pendingProps;
-      const resolvedProps =
-        workInProgress.elementType === _Component
-          ? unresolvedProps
-          : resolveDefaultProps(_Component, unresolvedProps);
 
       return updateFunctionComponent(
         current,
         workInProgress,
         _Component,
-        resolvedProps,
+        workInProgress.pendingProps,
       );
     }
     case HostRoot: {
@@ -1043,20 +1196,22 @@ function beginWork(current, workInProgress) {
   }
 }
 
-const randomKey = Math.random().toString(36).slice(2);
-const internalInstanceKey = '__reactInternalInstance$' + randomKey;
-const internalEventHandlersKey = '__reactEventHandlers$' + randomKey;
-topLevelFunctionsRegister.push('precacheFiberNode')
+topLevelFunctionsRegister.push('precacheFiberNode');
+
 function precacheFiberNode(hostInst, node) {
   logFuncUsage(['precacheFiberNode'], { hostInst, node });
   node[internalInstanceKey] = hostInst;
 }
-topLevelFunctionsRegister.push('updateFiberProps')
+
+topLevelFunctionsRegister.push('updateFiberProps');
+
 function updateFiberProps(node, props) {
   logFuncUsage(['updateFiberProps'], { node, props });
   node[internalEventHandlersKey] = props;
 }
-topLevelFunctionsRegister.push('getOwnerDocumentFromRootContainer')
+
+topLevelFunctionsRegister.push('getOwnerDocumentFromRootContainer');
+
 function getOwnerDocumentFromRootContainer(rootContainerElement) {
   logFuncUsage(['getOwnerDocumentFromRootContainer'], { rootContainerElement });
 
@@ -1064,7 +1219,9 @@ function getOwnerDocumentFromRootContainer(rootContainerElement) {
     ? rootContainerElement
     : rootContainerElement.ownerDocument;
 }
-topLevelFunctionsRegister.push('createInstance')
+
+topLevelFunctionsRegister.push('createInstance');
+
 function createInstance(
   type,
   props,
@@ -1136,7 +1293,9 @@ function createInstance(
 
   return domElement;
 }
-topLevelFunctionsRegister.push('createCursor')
+
+topLevelFunctionsRegister.push('createCursor');
+
 function createCursor(defaultValue) {
   logFuncUsage(['createCursor'], { defaultValue });
 
@@ -1146,18 +1305,24 @@ function createCursor(defaultValue) {
 }
 
 const rootInstanceStackCursor = createCursor(NO_CONTEXT);
-topLevelFunctionsRegister.push('appendInitialChild')
+
+topLevelFunctionsRegister.push('appendInitialChild');
+
 function appendInitialChild(parentInstance, child) {
   logFuncUsage(['appendInitialChild'], { parentInstance, child });
   parentInstance.appendChild(child);
 }
-topLevelFunctionsRegister.push('getRootHostContainer')
+
+topLevelFunctionsRegister.push('getRootHostContainer');
+
 function getRootHostContainer() {
   logFuncUsage(['getRootHostContainer']);
 
   return rootInstanceStackCursor.current;
 }
-topLevelFunctionsRegister.push('diffProperties')
+
+topLevelFunctionsRegister.push('diffProperties');
+
 function diffProperties(
   domElement,
   tag,
@@ -1307,7 +1472,9 @@ function diffProperties(
 
   return updatePayload;
 }
-topLevelFunctionsRegister.push('prepareUpdate')
+
+topLevelFunctionsRegister.push('prepareUpdate');
+
 function prepareUpdate(
   domElement,
   type,
@@ -1336,7 +1503,7 @@ let appendAllChildren;
 let updateHostComponent$1;
 
 {
-  topLevelFunctionsRegister.push('appendAllChildren')
+  topLevelFunctionsRegister.push('appendAllChildren');
   appendAllChildren = function (parent, workInProgress) {
     logFuncUsage(['appendAllChildren'], { parent, workInProgress });
 
@@ -1368,7 +1535,7 @@ let updateHostComponent$1;
       node = node.sibling;
     }
   };
-  topLevelFunctionsRegister.push('updateHostComponent$1')
+  topLevelFunctionsRegister.push('updateHostComponent$1');
   updateHostComponent$1 = function (
     current,
     workInProgress,
@@ -1406,7 +1573,9 @@ let updateHostComponent$1;
     }
   };
 }
-topLevelFunctionsRegister.push('isCustomComponent')
+
+topLevelFunctionsRegister.push('isCustomComponent');
+
 function isCustomComponent(tagName, props) {
   logFuncUsage(['isCustomComponent'], { tagName, props });
 
@@ -1417,16 +1586,17 @@ function isCustomComponent(tagName, props) {
   return true;
 }
 
-const PossiblyWeakMap = typeof WeakMap === 'function' ? WeakMap : Map; // prettier-ignore
-const elementListenerMap = new PossiblyWeakMap();
-topLevelFunctionsRegister.push('publishRegistrationName')
+topLevelFunctionsRegister.push('publishRegistrationName');
+
 function publishRegistrationName(registrationName, pluginModule, eventName) {
   logFuncUsage(['publishRegistrationName']);
   registrationNameModules[registrationName] = pluginModule;
   registrationNameDependencies[registrationName] =
     pluginModule.eventTypes[eventName].dependencies;
 }
-topLevelFunctionsRegister.push('getListenerMapForElement')
+
+topLevelFunctionsRegister.push('getListenerMapForElement');
+
 function getListenerMapForElement(element) {
   logFuncUsage(['getListenerMapForElement'], { element });
 
@@ -1440,8 +1610,7 @@ function getListenerMapForElement(element) {
   return listenerMap;
 }
 
-const PLUGIN_EVENT_SYSTEM = 1;
-var registrationNameDependencies = {};
+topLevelFunctionsRegister.push('getTopLevelCallbackBookKeeping');
 
 function getTopLevelCallbackBookKeeping(
   topLevelType,
@@ -1465,8 +1634,7 @@ function getTopLevelCallbackBookKeeping(
   };
 }
 
-const CALLBACK_BOOKKEEPING_POOL_SIZE = 10;
-const callbackBookkeepingPool = [];
+topLevelFunctionsRegister.push('releaseTopLevelCallbackBookKeeping');
 
 function releaseTopLevelCallbackBookKeeping(instance) {
   logFuncUsage(['releaseTopLevelCallbackBookKeeping'], { instance });
@@ -1480,13 +1648,16 @@ function releaseTopLevelCallbackBookKeeping(instance) {
   }
 }
 
-let isBatchingEventUpdates = false;
+topLevelFunctionsRegister.push('batchedUpdatesImpl');
+
 const batchedUpdatesImpl = function (fn, bookkeeping) {
   logFuncUsage(['batchedUpdatesImpl'], { fn, bookkeeping });
 
   return fn(bookkeeping);
 };
 const batchedEventUpdatesImpl = batchedUpdatesImpl;
+
+topLevelFunctionsRegister.push('batchedEventUpdates');
 
 function batchedEventUpdates(fn, a, b) {
   logFuncUsage(['batchedEventUpdates'], { fn, a, b });
@@ -1503,6 +1674,8 @@ function batchedEventUpdates(fn, a, b) {
     isBatchingEventUpdates = false;
   }
 }
+
+topLevelFunctionsRegister.push('findRootContainerNode');
 
 function findRootContainerNode(inst) {
   logFuncUsage(['findRootContainerNode'], { inst });
@@ -1522,7 +1695,7 @@ function findRootContainerNode(inst) {
   return inst.stateNode.containerInfo;
 }
 
-const IS_FIRST_ANCESTOR = 1 << 6;
+topLevelFunctionsRegister.push('executeDispatch');
 
 function executeDispatch(event, listener, inst) {
   logFuncUsage(['executeDispatch'], { event, listener, inst });
@@ -1530,6 +1703,8 @@ function executeDispatch(event, listener, inst) {
   listener(undefined, event);
   event.currentTarget = null;
 }
+
+topLevelFunctionsRegister.push('executeDispatchesInOrder');
 
 function executeDispatchesInOrder(event) {
   logFuncUsage(['executeDispatchesInOrder'], { event });
@@ -1553,8 +1728,12 @@ function executeDispatchesInOrder(event) {
   event._dispatchInstances = null;
 }
 
+topLevelFunctionsRegister.push('executeDispatchesAndRelease');
+
 const executeDispatchesAndRelease = function (event) {
-  logFuncUsage(['executeDispatchesAndRelease'], { executeDispatchesAndRelease });
+  logFuncUsage(['executeDispatchesAndRelease'], {
+    executeDispatchesAndRelease,
+  });
 
   if (event) {
     executeDispatchesInOrder(event);
@@ -1562,11 +1741,16 @@ const executeDispatchesAndRelease = function (event) {
     event.constructor.release(event);
   }
 };
+
+topLevelFunctionsRegister.push('executeDispatchesAndReleaseTopLevel');
+
 const executeDispatchesAndReleaseTopLevel = function (e) {
   logFuncUsage(['executeDispatchesAndReleaseTopLevel'], { e });
 
   return executeDispatchesAndRelease(e);
 };
+
+topLevelFunctionsRegister.push('accumulateInto');
 
 function accumulateInto(current, next) {
   logFuncUsage(['accumulateInto'], { current, next });
@@ -1594,12 +1778,14 @@ function accumulateInto(current, next) {
   return [current, next];
 }
 
+topLevelFunctionsRegister.push('forEachAccumulated');
+
 function forEachAccumulated(arr, cb) {
   logFuncUsage(['forEachAccumulated'], { arr, cb });
   cb(arr);
 }
 
-let eventQueue = null;
+topLevelFunctionsRegister.push('runEventsInBatch');
 
 function runEventsInBatch(events) {
   logFuncUsage(['runEventsInBatch'], { events });
@@ -1618,6 +1804,8 @@ function runEventsInBatch(events) {
 
   forEachAccumulated(processingEventQueue, executeDispatchesAndReleaseTopLevel);
 }
+
+topLevelFunctionsRegister.push('extractPluginEvents');
 
 function extractPluginEvents(
   topLevelType,
@@ -1657,6 +1845,8 @@ function extractPluginEvents(
   return events;
 }
 
+topLevelFunctionsRegister.push('runExtractedPluginEventsInBatch');
+
 function runExtractedPluginEventsInBatch(
   topLevelType,
   targetInst,
@@ -1682,6 +1872,8 @@ function runExtractedPluginEventsInBatch(
 
   runEventsInBatch(events);
 }
+
+topLevelFunctionsRegister.push('handleTopLevel');
 
 function handleTopLevel(bookKeeping) {
   logFuncUsage(['handleTopLevel'], { bookKeeping });
@@ -1735,6 +1927,8 @@ function handleTopLevel(bookKeeping) {
   }
 }
 
+topLevelFunctionsRegister.push('dispatchEventForLegacyPluginEventSystem');
+
 function dispatchEventForLegacyPluginEventSystem(
   topLevelType,
   eventSystemFlags,
@@ -1767,6 +1961,8 @@ function addEventBubbleListener(element, eventType, listener) {
   element.addEventListener(eventType, listener, false);
 }
 
+topLevelFunctionsRegister.push('getClosestInstanceFromNode');
+
 function getClosestInstanceFromNode(targetNode) {
   logFuncUsage(['getClosestInstanceFromNode'], { targetNode });
 
@@ -1792,6 +1988,8 @@ function getClosestInstanceFromNode(targetNode) {
   return null;
 }
 
+topLevelFunctionsRegister.push('getEventTarget');
+
 function getEventTarget(nativeEvent) {
   logFuncUsage(['getEventTarget'], { nativeEvent });
 
@@ -1803,6 +2001,8 @@ function getEventTarget(nativeEvent) {
 
   return target.nodeType === TEXT_NODE ? target.parentNode : target;
 }
+
+topLevelFunctionsRegister.push('attemptToDispatchEvent');
 
 function attemptToDispatchEvent(
   topLevelType,
@@ -1830,6 +2030,8 @@ function attemptToDispatchEvent(
   return null;
 }
 
+topLevelFunctionsRegister.push('dispatchEvent');
+
 function dispatchEvent(topLevelType, eventSystemFlags, container, nativeEvent) {
   logFuncUsage(['dispatchEvent']);
   attemptToDispatchEvent(
@@ -1839,6 +2041,8 @@ function dispatchEvent(topLevelType, eventSystemFlags, container, nativeEvent) {
     nativeEvent,
   );
 }
+
+topLevelFunctionsRegister.push('trapEventForPluginEventSystem');
 
 function trapEventForPluginEventSystem(container, topLevelType) {
   logFuncUsage(['trapEventForPluginEventSystem'], { container, topLevelType });
@@ -1855,10 +2059,14 @@ function trapEventForPluginEventSystem(container, topLevelType) {
   addEventBubbleListener(container, topLevelType, listener);
 }
 
+topLevelFunctionsRegister.push('trapBubbledEvent');
+
 function trapBubbledEvent(topLevelType, element) {
   logFuncUsage(['trapBubbledEvent'], { topLevelType, element });
   trapEventForPluginEventSystem(element, topLevelType, false);
 }
+
+topLevelFunctionsRegister.push('legacyListenToTopLevelEvent');
 
 function legacyListenToTopLevelEvent(topLevelType, mountAt, listenerMap) {
   logFuncUsage(['legacyListenToTopLevelEvent'], {
@@ -1873,6 +2081,8 @@ function legacyListenToTopLevelEvent(topLevelType, mountAt, listenerMap) {
   }
 }
 
+topLevelFunctionsRegister.push('legacyListenToEvent');
+
 function legacyListenToEvent(registrationName, mountAt) {
   logFuncUsage(['legacyListenToEvent'], { registrationName, mountAt });
 
@@ -1885,6 +2095,8 @@ function legacyListenToEvent(registrationName, mountAt) {
     legacyListenToTopLevelEvent(dependency, mountAt, listenerMap);
   }
 }
+
+topLevelFunctionsRegister.push('ensureListeningTo');
 
 function ensureListeningTo(rootContainerElement, registrationName) {
   logFuncUsage(['ensureListeningTo'], {
@@ -1902,9 +2114,7 @@ function ensureListeningTo(rootContainerElement, registrationName) {
   legacyListenToEvent(registrationName, doc);
 }
 
-var registrationNameModules = {};
-const HTML$1 = '__html';
-const STYLE = 'style';
+topLevelFunctionsRegister.push('setInitialDOMProperties');
 
 function setInitialDOMProperties(
   tag,
@@ -1929,19 +2139,7 @@ function setInitialDOMProperties(
     const nextProp = nextProps[propKey];
 
     if (propKey === STYLE) {
-      {
-        if (nextProp) {
-          Object.freeze(nextProp);
-        }
-      }
-
       setValueForStyles(domElement, nextProp);
-    } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
-      const nextHtml = nextProp ? nextProp[HTML$1] : undefined;
-
-      if (nextHtml != null) {
-        setInnerHTML(domElement, nextHtml);
-      }
     } else if (propKey === CHILDREN) {
       if (typeof nextProp === 'string') {
         const canSetTextContent = tag !== 'textarea' || nextProp !== '';
@@ -1957,11 +2155,11 @@ function setInitialDOMProperties(
       if (nextProp != null) {
         ensureListeningTo(rootContainerElement, propKey);
       }
-    } else if (nextProp != null) {
-      setValueForProperty(domElement, propKey, nextProp, isCustomComponentTag);
     }
   }
 }
+
+topLevelFunctionsRegister.push('setInitialProperties');
 
 function setInitialProperties(domElement, tag, rawProps, rootContainerElement) {
   logFuncUsage(['setInitialProperties'], {
@@ -1985,6 +2183,8 @@ function setInitialProperties(domElement, tag, rawProps, rootContainerElement) {
   );
 }
 
+topLevelFunctionsRegister.push('shouldAutoFocusHostComponent');
+
 function shouldAutoFocusHostComponent(type, props) {
   logFuncUsage(['shouldAutoFocusHostComponent'], { type, props });
 
@@ -1998,6 +2198,8 @@ function shouldAutoFocusHostComponent(type, props) {
 
   return false;
 }
+
+topLevelFunctionsRegister.push('finalizeInitialChildren');
 
 function finalizeInitialChildren(
   domElement,
@@ -2016,10 +2218,14 @@ function finalizeInitialChildren(
   return shouldAutoFocusHostComponent(type, props);
 }
 
+topLevelFunctionsRegister.push('markUpdate');
+
 function markUpdate(workInProgress) {
   logFuncUsage(['markUpdate'], { workInProgress });
   workInProgress.effectTag |= Update;
 }
+
+topLevelFunctionsRegister.push('completeWork');
 
 function completeWork(current, workInProgress) {
   logFuncUsage(['completeWork'], { current, workInProgress });
@@ -2080,13 +2286,7 @@ function completeWork(current, workInProgress) {
   }
 }
 
-function createFiberFromText(content) {
-  logFuncUsage(['createFiberFromText'], { content });
-
-  const fiber = createFiber(HostText, content, null);
-
-  return fiber;
-}
+topLevelFunctionsRegister.push('createFiberFromTypeAndProps');
 
 function createFiberFromTypeAndProps(type, key, pendingProps, owner, mode) {
   logFuncUsage(['createFiberFromTypeAndProps'], {
@@ -2111,7 +2311,7 @@ function createFiberFromTypeAndProps(type, key, pendingProps, owner, mode) {
   return fiber;
 }
 
-const isArray$1 = Array.isArray;
+topLevelFunctionsRegister.push('createFiberFromElement');
 
 function createFiberFromElement(element) {
   logFuncUsage(['createFiberFromElement'], { element });
@@ -2123,8 +2323,11 @@ function createFiberFromElement(element) {
   return createFiberFromTypeAndProps(type, key, pendingProps, null);
 }
 
+topLevelFunctionsRegister.push('ChildReconciler');
+
 function ChildReconciler(shouldTrackSideEffects) {
   logFuncUsage(['ChildReconciler'], { shouldTrackSideEffects });
+  topLevelFunctionsRegister.push('deleteChild');
 
   function deleteChild(returnFiber, childToDelete) {
     logFuncUsage(['deleteChild'], { returnFiber, childToDelete });
@@ -2146,6 +2349,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     childToDelete.effectTag = Deletion;
   }
 
+  topLevelFunctionsRegister.push('deleteRemainingChildren');
+
   function deleteRemainingChildren(returnFiber, currentFirstChild) {
     logFuncUsage(['deleteRemainingChildren'], currentFirstChild);
 
@@ -2162,6 +2367,8 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     return null;
   }
+
+  topLevelFunctionsRegister.push('mapRemainingChildren');
 
   function mapRemainingChildren(returnFiber, currentFirstChild) {
     logFuncUsage(['mapRemainingChildren'], { returnFiber, currentFirstChild });
@@ -2182,6 +2389,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     return existingChildren;
   }
 
+  topLevelFunctionsRegister.push('useFiber');
+
   function useFiber(fiber, pendingProps) {
     logFuncUsage(['useFiber'], { fiber, pendingProps });
 
@@ -2192,6 +2401,8 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     return clone;
   }
+
+  topLevelFunctionsRegister.push('placeChild');
 
   function placeChild(newFiber, lastPlacedIndex, newIndex) {
     logFuncUsage(['placeChild'], { newFiber, lastPlacedIndex, newIndex });
@@ -2220,6 +2431,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
   }
 
+  topLevelFunctionsRegister.push('placeSingleChild');
+
   function placeSingleChild(newFiber) {
     logFuncUsage(['placeSingleChild'], { newFiber });
 
@@ -2230,23 +2443,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return newFiber;
   }
 
-  function updateTextNode(returnFiber, current, textContent) {
-    logFuncUsage(['updateTextNode'], { returnFiber, current, textContent });
-
-    if (current === null || current.tag !== HostText) {
-      const created = createFiberFromText(textContent);
-
-      created.return = returnFiber;
-
-      return created;
-    } else {
-      const existing = useFiber(current, textContent);
-
-      existing.return = returnFiber;
-
-      return existing;
-    }
-  }
+  topLevelFunctionsRegister.push('updateElement');
 
   function updateElement(returnFiber, current, element) {
     logFuncUsage(['updateElement'], { returnFiber, current, element });
@@ -2272,6 +2469,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     return created;
   }
 
+  topLevelFunctionsRegister.push('updateSlot');
+
   function updateSlot(returnFiber, oldFiber, newChild) {
     logFuncUsage(['updateSlot'], {
       returnFiber,
@@ -2280,14 +2479,6 @@ function ChildReconciler(shouldTrackSideEffects) {
     });
 
     const key = oldFiber !== null ? oldFiber.key : null;
-
-    if (typeof newChild === 'string' || typeof newChild === 'number') {
-      if (key !== null) {
-        return null;
-      }
-
-      return updateTextNode(returnFiber, oldFiber, '' + newChild);
-    }
 
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
@@ -2304,6 +2495,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     return null;
   }
 
+  topLevelFunctionsRegister.push('updateFromMap');
+
   function updateFromMap(existingChildren, returnFiber, newIdx, newChild) {
     logFuncUsage(['updateFromMap'], {
       existingChildren,
@@ -2311,12 +2504,6 @@ function ChildReconciler(shouldTrackSideEffects) {
       newIdx,
       newChild,
     });
-
-    if (typeof newChild === 'string' || typeof newChild === 'number') {
-      const matchedFiber = existingChildren.get(newIdx) || null;
-
-      return updateTextNode(returnFiber, matchedFiber, '' + newChild);
-    }
 
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
@@ -2333,6 +2520,8 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     return null;
   }
+
+  topLevelFunctionsRegister.push('reconcileChildrenArray');
 
   function reconcileChildrenArray(returnFiber, currentFirstChild, newChildren) {
     logFuncUsage(['reconcileChildrenArray'], {
@@ -2424,6 +2613,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     return resultingFirstChild;
   }
 
+  topLevelFunctionsRegister.push('reconcileSingleElement');
+
   function reconcileSingleElement(returnFiber, currentFirstChild, element) {
     logFuncUsage(['reconcileSingleElement'], {
       returnFiber,
@@ -2487,6 +2678,8 @@ function ChildReconciler(shouldTrackSideEffects) {
   return reconcileChildFibers;
 }
 
+topLevelFunctionsRegister.push('completeUnitOfWork');
+
 function completeUnitOfWork(unitOfWork) {
   logFuncUsage(['completeUnitOfWork'], { unitOfWork });
   workInProgress = unitOfWork;
@@ -2539,7 +2732,7 @@ function completeUnitOfWork(unitOfWork) {
   return null;
 }
 
-let performUnitOfWorkCounter = 0;
+topLevelFunctionsRegister.push('performUnitOfWork');
 
 function performUnitOfWork(unitOfWork) {
   logFuncUsage(['performUnitOfWork'], performUnitOfWorkCounter, { unitOfWork });
@@ -2563,23 +2756,7 @@ function performUnitOfWork(unitOfWork) {
   return next;
 }
 
-function hasSelectionCapabilities(elem) {
-  logFuncUsage(['hasSelectionCapabilities'], { elem });
-
-  const nodeName = elem && elem.nodeName && elem.nodeName.toLowerCase();
-
-  return (
-    nodeName &&
-    ((nodeName === 'input' &&
-      (elem.type === 'text' ||
-        elem.type === 'search' ||
-        elem.type === 'tel' ||
-        elem.type === 'url' ||
-        elem.type === 'password')) ||
-      nodeName === 'textarea' ||
-      elem.contentEditable === 'true')
-  );
-}
+topLevelFunctionsRegister.push('getActiveElement');
 
 function getActiveElement() {
   logFuncUsage(['getActiveElement']);
@@ -2597,6 +2774,8 @@ function getActiveElement() {
   }
 }
 
+topLevelFunctionsRegister.push('getSelectionInformation');
+
 function getSelectionInformation() {
   logFuncUsage(['getSelectionInformation']);
 
@@ -2609,6 +2788,8 @@ function getSelectionInformation() {
   };
 }
 
+topLevelFunctionsRegister.push('workLoopSync');
+
 function workLoopSync() {
   logFuncUsage(['workLoopSync']);
 
@@ -2619,7 +2800,7 @@ function workLoopSync() {
   }
 }
 
-let _enabled = true;
+topLevelFunctionsRegister.push('isEnabled');
 
 function isEnabled() {
   logFuncUsage(['isEnabled']);
@@ -2627,13 +2808,14 @@ function isEnabled() {
   return _enabled;
 }
 
+topLevelFunctionsRegister.push('setEnabled');
+
 function setEnabled(enabled) {
   logFuncUsage(['setEnabled'], { enabled });
   _enabled = !!enabled;
 }
 
-let eventsEnabled = null;
-let selectionInformation = null;
+topLevelFunctionsRegister.push('prepareForCommit');
 
 function prepareForCommit() {
   logFuncUsage(['prepareForCommit']);
@@ -2642,210 +2824,17 @@ function prepareForCommit() {
   setEnabled(false);
 }
 
-function isTextNode(node) {
-  logFuncUsage(['isTextNode'], { node });
-
-  return node && node.nodeType === TEXT_NODE;
-}
-
-function containsNode(outerNode, innerNode) {
-  logFuncUsage(['containsNode'], { outerNode, innerNode });
-
-  if (!outerNode || !innerNode) {
-    return false;
-  } else if (outerNode === innerNode) {
-    return true;
-  } else if (isTextNode(outerNode)) {
-    return false;
-  } else if (isTextNode(innerNode)) {
-    return containsNode(outerNode, innerNode.parentNode);
-  } else if ('contains' in outerNode) {
-    return outerNode.contains(innerNode);
-  } else if (outerNode.compareDocumentPosition) {
-    return !!(outerNode.compareDocumentPosition(innerNode) & 16);
-  } else {
-    return false;
-  }
-}
-
-function isInDocument(node) {
-  logFuncUsage(['isInDocument'], { node });
-
-  return (
-    node &&
-    node.ownerDocument &&
-    containsNode(node.ownerDocument.documentElement, node)
-  );
-}
-
-function getSiblingNode(node) {
-  logFuncUsage(['getSiblingNode'], { node });
-
-  while (node) {
-    if (node.nextSibling) {
-      return node.nextSibling;
-    }
-
-    node = node.parentNode;
-  }
-}
-
-function getLeafNode(node) {
-  logFuncUsage(['getLeafNode'], { node });
-
-  while (node && node.firstChild) {
-    node = node.firstChild;
-  }
-
-  return node;
-}
-
-function getNodeForCharacterOffset(root, offset) {
-  logFuncUsage(['getNodeForCharacterOffset'], { root, offset });
-
-  let node = getLeafNode(root);
-  let nodeStart = 0;
-  let nodeEnd = 0;
-
-  while (node) {
-    if (node.nodeType === TEXT_NODE) {
-      nodeEnd = nodeStart + node.textContent.length;
-
-      if (nodeStart <= offset && nodeEnd >= offset) {
-        return {
-          node: node,
-          offset: offset - nodeStart,
-        };
-      }
-
-      nodeStart = nodeEnd;
-    }
-
-    node = getLeafNode(getSiblingNode(node));
-  }
-}
-
-function setOffsets(node, offsets) {
-  logFuncUsage(['setOffsets'], { node, offsets });
-
-  const doc = node.ownerDocument || document;
-  const win = (doc && doc.defaultView) || window;
-
-  if (!win.getSelection) {
-    return;
-  }
-
-  const selection = win.getSelection();
-  const length = node.textContent.length;
-  let start = Math.min(offsets.start, length);
-  let end = offsets.end === undefined ? start : Math.min(offsets.end, length);
-
-  if (!selection.extend && start > end) {
-    const temp = end;
-
-    end = start;
-    start = temp;
-  }
-
-  const startMarker = getNodeForCharacterOffset(node, start);
-  const endMarker = getNodeForCharacterOffset(node, end);
-
-  if (startMarker && endMarker) {
-    if (
-      selection.rangeCount === 1 &&
-      selection.anchorNode === startMarker.node &&
-      selection.anchorOffset === startMarker.offset &&
-      selection.focusNode === endMarker.node &&
-      selection.focusOffset === endMarker.offset
-    ) {
-      return;
-    }
-
-    const range = doc.createRange();
-
-    range.setStart(startMarker.node, startMarker.offset);
-    selection.removeAllRanges();
-
-    if (start > end) {
-      selection.addRange(range);
-      selection.extend(endMarker.node, endMarker.offset);
-    } else {
-      range.setEnd(endMarker.node, endMarker.offset);
-      selection.addRange(range);
-    }
-  }
-}
-
-function setSelection(input, offsets) {
-  logFuncUsage(['setSelection'], { input, offsets });
-
-  let start = offsets.start,
-    end = offsets.end;
-
-  if (end === undefined) {
-    end = start;
-  }
-
-  if ('selectionStart' in input) {
-    input.selectionStart = start;
-    input.selectionEnd = Math.min(end, input.value.length);
-  } else {
-    setOffsets(input, offsets);
-  }
-}
-
-function restoreSelection(priorSelectionInformation) {
-  logFuncUsage(['restoreSelection'], { priorSelectionInformation });
-
-  const curFocusedElem = getActiveElement();
-  const priorFocusedElem = priorSelectionInformation.focusedElem;
-  const priorSelectionRange = priorSelectionInformation.selectionRange;
-
-  if (curFocusedElem !== priorFocusedElem && isInDocument(priorFocusedElem)) {
-    if (
-      priorSelectionRange !== null &&
-      hasSelectionCapabilities(priorFocusedElem)
-    ) {
-      setSelection(priorFocusedElem, priorSelectionRange);
-    }
-
-    const ancestors = [];
-    let ancestor = priorFocusedElem;
-
-    while ((ancestor = ancestor.parentNode)) {
-      if (ancestor.nodeType === ELEMENT_NODE) {
-        ancestors.push({
-          element: ancestor,
-          left: ancestor.scrollLeft,
-          top: ancestor.scrollTop,
-        });
-      }
-    }
-
-    if (typeof priorFocusedElem.focus === 'function') {
-      priorFocusedElem.focus();
-    }
-
-    for (let i = 0; i < ancestors.length; i++) {
-      const info = ancestors[i];
-
-      info.element.scrollLeft = info.left;
-      info.element.scrollTop = info.top;
-    }
-  }
-}
+topLevelFunctionsRegister.push('resetAfterCommit');
 
 function resetAfterCommit() {
   logFuncUsage(['resetAfterCommit']);
-  restoreSelection(selectionInformation);
   setEnabled(eventsEnabled);
   eventsEnabled = null;
 
   selectionInformation = null;
 }
 
-let current = null;
-let nextEffect = null;
+topLevelFunctionsRegister.push('resetCurrentFiber');
 
 function resetCurrentFiber() {
   logFuncUsage(['resetCurrentFiber']);
@@ -2853,13 +2842,15 @@ function resetCurrentFiber() {
   isRendering = false;
 }
 
+topLevelFunctionsRegister.push('setCurrentFiber');
+
 function setCurrentFiber(fiber) {
   logFuncUsage(['setCurrentFiber'], { fiber });
   current = fiber;
   isRendering = false;
 }
 
-let effectCountInCurrentCommit = 0;
+topLevelFunctionsRegister.push('recordEffect');
 
 function recordEffect() {
   logFuncUsage(['recordEffect']);
@@ -2869,11 +2860,15 @@ function recordEffect() {
   }
 }
 
+topLevelFunctionsRegister.push('isHostParent');
+
 function isHostParent(fiber) {
   logFuncUsage(['isHostParent'], { fiber });
 
   return fiber.tag === HostComponent || fiber.tag === HostRoot;
 }
+
+topLevelFunctionsRegister.push('getHostParentFiber');
 
 function getHostParentFiber(fiber) {
   logFuncUsage(['getHostParentFiber'], { fiber });
@@ -2888,6 +2883,8 @@ function getHostParentFiber(fiber) {
     parent = parent.return;
   }
 }
+
+topLevelFunctionsRegister.push('getHostSibling');
 
 function getHostSibling(fiber) {
   logFuncUsage(['getHostSibling'], { fiber });
@@ -2925,6 +2922,8 @@ function getHostSibling(fiber) {
   }
 }
 
+topLevelFunctionsRegister.push('insertOrAppendPlacementNodeIntoContainer');
+
 function insertOrAppendPlacementNodeIntoContainer(node, before, parent) {
   logFuncUsage(['insertOrAppendPlacementNodeIntoContainer'], {
     node,
@@ -2955,10 +2954,14 @@ function insertOrAppendPlacementNodeIntoContainer(node, before, parent) {
   }
 }
 
+topLevelFunctionsRegister.push('appendChild');
+
 function appendChild(parentInstance, child) {
-  logFuncUsage(['parentInstance'], { parentInstance, child });
+  logFuncUsage(['appendChild'], { parentInstance, child });
   parentInstance.appendChild(child);
 }
+
+topLevelFunctionsRegister.push('insertOrAppendPlacementNode');
 
 function insertOrAppendPlacementNode(node, before, parent) {
   logFuncUsage(['insertOrAppendPlacementNode'], { node, before, parent });
@@ -2985,6 +2988,8 @@ function insertOrAppendPlacementNode(node, before, parent) {
     }
   }
 }
+
+topLevelFunctionsRegister.push('commitPlacement');
 
 function commitPlacement(finishedWork) {
   logFuncUsage(['commitPlacement'], { finishedWork });
@@ -3016,53 +3021,7 @@ function commitPlacement(finishedWork) {
   }
 }
 
-const DANGEROUSLY_SET_INNER_HTML = 'dangerouslySetInnerHTML';
-const AUTOFOCUS = 'autoFocus';
-const CHILDREN = 'children';
-const isUnitlessNumber = {
-  animationIterationCount: true,
-  borderImageOutset: true,
-  borderImageSlice: true,
-  borderImageWidth: true,
-  boxFlex: true,
-  boxFlexGroup: true,
-  boxOrdinalGroup: true,
-  columnCount: true,
-  columns: true,
-  flex: true,
-  flexGrow: true,
-  flexPositive: true,
-  flexShrink: true,
-  flexNegative: true,
-  flexOrder: true,
-  gridArea: true,
-  gridRow: true,
-  gridRowEnd: true,
-  gridRowSpan: true,
-  gridRowStart: true,
-  gridColumn: true,
-  gridColumnEnd: true,
-  gridColumnSpan: true,
-  gridColumnStart: true,
-  fontWeight: true,
-  lineClamp: true,
-  lineHeight: true,
-  opacity: true,
-  order: true,
-  orphans: true,
-  tabSize: true,
-  widows: true,
-  zIndex: true,
-  zoom: true,
-  fillOpacity: true,
-  floodOpacity: true,
-  stopOpacity: true,
-  strokeDasharray: true,
-  strokeDashoffset: true,
-  strokeMiterlimit: true,
-  strokeOpacity: true,
-  strokeWidth: true,
-};
+topLevelFunctionsRegister.push('dangerousStyleValue');
 
 function dangerousStyleValue(name, value, isCustomProperty) {
   logFuncUsage(['dangerousStyleValue'], { name, value, isCustomProperty });
@@ -3084,6 +3043,8 @@ function dangerousStyleValue(name, value, isCustomProperty) {
 
   return ('' + value).trim();
 }
+
+topLevelFunctionsRegister.push('setValueForStyles');
 
 function setValueForStyles(node, styles) {
   logFuncUsage(['setValueForStyles'], { node, styles });
@@ -3114,10 +3075,7 @@ function setValueForStyles(node, styles) {
   }
 }
 
-function setInnerHTML(node, html) {
-  logFuncUsage(['setInnerHTML'], { node, html });
-  node.innerHTML = html;
-}
+topLevelFunctionsRegister.push('setTextContent');
 
 const setTextContent = function (node, text) {
   logFuncUsage(['setTextContent'], { node, text });
@@ -3139,6 +3097,8 @@ const setTextContent = function (node, text) {
   node.textContent = text;
 };
 
+topLevelFunctionsRegister.push('updateDOMProperties');
+
 function updateDOMProperties(
   domElement,
   updatePayload,
@@ -3159,96 +3119,13 @@ function updateDOMProperties(
 
     if (propKey === STYLE) {
       setValueForStyles(domElement, propValue);
-    } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
-      setInnerHTML(domElement, propValue);
     } else if (propKey === CHILDREN) {
       setTextContent(domElement, propValue);
-    } else {
-      setValueForProperty(domElement, propKey, propValue, isCustomComponentTag);
     }
   }
 }
 
-function shouldIgnoreAttribute(name, isCustomComponentTag) {
-  logFuncUsage(['shouldIgnoreAttribute'], { name, isCustomComponentTag });
-
-  if (isCustomComponentTag) {
-    return false;
-  }
-
-  if (
-    name.length > 2 &&
-    (name[0] === 'o' || name[0] === 'O') &&
-    (name[1] === 'n' || name[1] === 'N')
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function shouldRemoveAttribute(
-  name,
-  value,
-  propertyInfo,
-  isCustomComponentTag,
-) {
-  logFuncUsage(['shouldRemoveAttribute'], {
-    name,
-    value,
-    propertyInfo,
-    isCustomComponentTag,
-  });
-
-  if (value === null || typeof value === 'undefined') {
-    return true;
-  }
-
-  if (isCustomComponentTag) {
-    return false;
-  }
-
-  return false;
-}
-
-function setValueForProperty(node, name, value, isCustomComponentTag) {
-  logFuncUsage(['setValueForProperty'], {
-    node,
-    name,
-    value,
-    isCustomComponentTag,
-  });
-
-  const propertyInfo = null;
-
-  if (shouldIgnoreAttribute(name, isCustomComponentTag)) {
-    return;
-  }
-
-  if (shouldRemoveAttribute(name, value, propertyInfo, isCustomComponentTag)) {
-    value = null;
-  }
-
-  const mustUseProperty = propertyInfo.mustUseProperty;
-
-  if (mustUseProperty) {
-    const propertyName = propertyInfo.propertyName;
-
-    if (value === null) {
-      const type = propertyInfo.type;
-
-      node[propertyName] = type === BOOLEAN ? false : '';
-    } else {
-      node[propertyName] = value;
-    }
-
-    return;
-  }
-
-  const attributeName = propertyInfo.attributeName;
-
-  node.removeAttribute(attributeName);
-}
+topLevelFunctionsRegister.push('updateProperties');
 
 function updateProperties(
   domElement,
@@ -3276,6 +3153,8 @@ function updateProperties(
   );
 }
 
+topLevelFunctionsRegister.push('commitUpdate');
+
 function commitUpdate(domElement, updatePayload, type, oldProps, newProps) {
   logFuncUsage(['commitUpdate'], {
     domElement,
@@ -3288,6 +3167,8 @@ function commitUpdate(domElement, updatePayload, type, oldProps, newProps) {
 
   updateProperties(domElement, updatePayload, type, oldProps, newProps);
 }
+
+topLevelFunctionsRegister.push('commitWork');
 
 function commitWork(current, finishedWork) {
   logFuncUsage(['commitWork'], { current, finishedWork });
@@ -3314,6 +3195,8 @@ function commitWork(current, finishedWork) {
   }
 }
 
+topLevelFunctionsRegister.push('commitDeletion');
+
 function commitDeletion(finishedRoot, current) {
   logFuncUsage(['commitDeletion'], {
     finishedRoot,
@@ -3326,6 +3209,8 @@ function commitDeletion(finishedRoot, current) {
 
   detachFiber(current);
 }
+
+topLevelFunctionsRegister.push('detachFiber');
 
 function detachFiber(current) {
   logFuncUsage(['detachFiber'], { current });
@@ -3348,6 +3233,8 @@ function detachFiber(current) {
     detachFiber(alternate);
   }
 }
+
+topLevelFunctionsRegister.push('commitNestedUnmounts');
 
 function commitNestedUnmounts(finishedRoot, root) {
   logFuncUsage(['commitNestedUnmounts'], {
@@ -3382,15 +3269,14 @@ function commitNestedUnmounts(finishedRoot, root) {
   }
 }
 
+topLevelFunctionsRegister.push('removeChild');
+
 function removeChild(parentInstance, child) {
-  logFuncUsage(['removeChildFromContainer'], { parentInstance, child });
+  logFuncUsage(['removeChild'], { parentInstance, child });
   parentInstance.removeChild(child);
 }
 
-function removeChildFromContainer(container, child) {
-  logFuncUsage(['removeChildFromContainer'], { container, child });
-  container.removeChild(child);
-}
+topLevelFunctionsRegister.push('unmountHostComponents');
 
 function unmountHostComponents(finishedRoot, current) {
   logFuncUsage(['unmountHostComponents'], {
@@ -3431,11 +3317,7 @@ function unmountHostComponents(finishedRoot, current) {
 
     commitNestedUnmounts(finishedRoot, node);
 
-    if (currentParentIsContainer) {
-      removeChildFromContainer(currentParent, node.stateNode);
-    } else {
-      removeChild(currentParent, node.stateNode);
-    }
+    removeChild(currentParent, node.stateNode);
 
     if (node === current) {
       return;
@@ -3454,29 +3336,7 @@ function unmountHostComponents(finishedRoot, current) {
   }
 }
 
-function resetTextContent(domElement) {
-  logFuncUsage(['resetTextContent'], { domElement });
-  setTextContent(domElement, '');
-}
-
-function commitResetTextContent(current) {
-  logFuncUsage(['commitResetTextContent'], { current });
-  resetTextContent(current.stateNode);
-}
-
-function commitDetachRef(current) {
-  logFuncUsage(['commitDetachRef'], { current });
-
-  const currentRef = current.ref;
-
-  if (currentRef !== null) {
-    if (typeof currentRef === 'function') {
-      currentRef(null);
-    } else {
-      currentRef.current = null;
-    }
-  }
-}
+topLevelFunctionsRegister.push('commitMutationEffects');
 
 function commitMutationEffects(root) {
   logFuncUsage(['commitMutationEffects'], { root });
@@ -3485,18 +3345,6 @@ function commitMutationEffects(root) {
     setCurrentFiber(nextEffect);
 
     const effectTag = nextEffect.effectTag;
-
-    if (effectTag & ContentReset) {
-      commitResetTextContent(nextEffect);
-    }
-
-    if (effectTag & Ref) {
-      const current = nextEffect.alternate;
-
-      if (current !== null) {
-        commitDetachRef(current);
-      }
-    }
 
     const primaryEffectTag = effectTag & (Placement | Update | Deletion);
 
@@ -3537,6 +3385,8 @@ function commitMutationEffects(root) {
     nextEffect = nextEffect.nextEffect;
   }
 }
+
+topLevelFunctionsRegister.push('commitRoot');
 
 function commitRoot(root) {
   logFuncUsage(['commitRoot'], { root });
@@ -3589,11 +3439,15 @@ function commitRoot(root) {
   return null;
 }
 
+topLevelFunctionsRegister.push('finishSyncRender');
+
 function finishSyncRender(root) {
   logFuncUsage(['finishSyncRender'], { root });
   workInProgressRoot = null;
   commitRoot(root);
 }
+
+topLevelFunctionsRegister.push('performSyncWorkOnRoot');
 
 function performSyncWorkOnRoot(root) {
   logFuncUsage(['performSyncWorkOnRoot'], root);
@@ -3615,65 +3469,39 @@ function performSyncWorkOnRoot(root) {
   return null;
 }
 
+topLevelFunctionsRegister.push('ensureRootIsScheduled');
+
 function ensureRootIsScheduled(root) {
   logFuncUsage(['ensureRootIsScheduled'], { root });
 
   scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root));
 }
 
-function Scheduler_scheduleCallback(callback) {
-  logFuncUsage(['Scheduler_scheduleCallback'], { callback });
-  callback();
-}
-
-let isFlushingSyncQueue = false;
-let immediateQueueCallbackNode = null;
-
-function flushSyncCallbackQueueImpl() {
-  logFuncUsage(['flushSyncCallbackQueueImpl']);
-
-  if (!isFlushingSyncQueue && syncQueue !== null) {
-    isFlushingSyncQueue = true;
-
-    let i = 0;
-
-    try {
-      const _isSync = true;
-      const queue = syncQueue;
-
-      for (; i < queue.length; i++) {
-        let callback = queue[i];
-
-        do {
-          callback = callback(_isSync);
-        } while (callback !== null);
-      }
-
-      syncQueue = null;
-    } catch (error) {
-      if (syncQueue !== null) {
-        syncQueue = syncQueue.slice(i + 1);
-      }
-
-      Scheduler_scheduleCallback(flushSyncCallbackQueue);
-
-      throw error;
-    } finally {
-      isFlushingSyncQueue = false;
-    }
-  }
-}
+topLevelFunctionsRegister.push('flushSyncCallbackQueue');
 
 function flushSyncCallbackQueue() {
   logFuncUsage(['flushSyncCallbackQueue']);
 
   immediateQueueCallbackNode = null;
 
-  flushSyncCallbackQueueImpl();
+  let i = 0;
+
+  const _isSync = true;
+  const queue = syncQueue;
+
+  for (; i < queue.length; i++) {
+    let callback = queue[i];
+
+    do {
+      callback = callback(_isSync);
+    } while (callback !== null);
+  }
 }
 
+topLevelFunctionsRegister.push('scheduleWork');
+
 function scheduleWork(fiber) {
-  logFuncUsage(['scheduleUpdateOnFiber'], { fiber });
+  logFuncUsage(['scheduleWork'], { fiber });
 
   const root = markUpdateTimeFromFiberToRoot(fiber);
 
@@ -3685,6 +3513,8 @@ function scheduleWork(fiber) {
 
   flushSyncCallbackQueue();
 }
+
+topLevelFunctionsRegister.push('updateContainer');
 
 function updateContainer(element, container, parentComponent) {
   logFuncUsage(['updateContainer'], { element, container, parentComponent });
@@ -3699,6 +3529,8 @@ function updateContainer(element, container, parentComponent) {
   scheduleWork(container.current);
 }
 
+topLevelFunctionsRegister.push('render');
+
 function render(element, container) {
   logFuncUsage(['render'], { element, container });
 
@@ -3709,10 +3541,7 @@ function render(element, container) {
   return null;
 }
 
-const namesToPlugins = {};
-let eventPluginOrder = null;
-var plugins = [];
-const eventNameDispatchConfigs = {};
+topLevelFunctionsRegister.push('publishEventForPlugin');
 
 function publishEventForPlugin(dispatchConfig, pluginModule, eventName) {
   logFuncUsage(['publishEventForPlugin'], {
@@ -3751,6 +3580,8 @@ function publishEventForPlugin(dispatchConfig, pluginModule, eventName) {
   return false;
 }
 
+topLevelFunctionsRegister.push('recomputePluginOrdering');
+
 function recomputePluginOrdering() {
   logFuncUsage(['recomputePluginOrdering']);
 
@@ -3781,6 +3612,8 @@ function recomputePluginOrdering() {
   }
 }
 
+topLevelFunctionsRegister.push('injectEventPluginsByName');
+
 function injectEventPluginsByName(injectedNamesToPlugins) {
   logFuncUsage(['injectEventPluginsByName'], { injectedNamesToPlugins });
 
@@ -3807,8 +3640,7 @@ function injectEventPluginsByName(injectedNamesToPlugins) {
   }
 }
 
-const simpleEventPluginEventTypes = {};
-const topLevelEventsToDispatchConfig = new Map();
+topLevelFunctionsRegister.push('SyntheticEvent');
 
 function SyntheticEvent(
   dispatchConfig,
@@ -3862,6 +3694,8 @@ function SyntheticEvent(
   return this;
 }
 
+topLevelFunctionsRegister.push('getPooledEvent');
+
 function getPooledEvent(dispatchConfig, targetInst, nativeEvent, nativeInst) {
   logFuncUsage(['getPooledEvent'], {
     dispatchConfig,
@@ -3894,7 +3728,7 @@ function getPooledEvent(dispatchConfig, targetInst, nativeEvent, nativeInst) {
   );
 }
 
-const EVENT_POOL_SIZE = 10;
+topLevelFunctionsRegister.push('releasePooledEvent');
 
 function releasePooledEvent(event) {
   logFuncUsage(['releasePooledEvent'], { event });
@@ -3906,6 +3740,8 @@ function releasePooledEvent(event) {
   }
 }
 
+topLevelFunctionsRegister.push('addEventPoolingTo');
+
 function addEventPoolingTo(EventConstructor) {
   logFuncUsage(['addEventPoolingTo'], { EventConstructor });
   EventConstructor.eventPool = [];
@@ -3913,6 +3749,7 @@ function addEventPoolingTo(EventConstructor) {
   EventConstructor.release = releasePooledEvent;
 }
 
+topLevelFunctionsRegister.push('SyntheticEvent.extend');
 SyntheticEvent.extend = function (Interface) {
   logFuncUsage(['SyntheticEvent.extend'], { Interface });
 
@@ -3957,6 +3794,8 @@ const SyntheticMouseEvent = SyntheticUIEvent.extend({
   buttons: null,
 });
 
+topLevelFunctionsRegister.push('getParent');
+
 function getParent(inst) {
   logFuncUsage(['getParent'], { inst });
   do {
@@ -3969,6 +3808,8 @@ function getParent(inst) {
 
   return null;
 }
+
+topLevelFunctionsRegister.push('traverseTwoPhase');
 
 function traverseTwoPhase(inst, fn, arg) {
   logFuncUsage(['traverseTwoPhase'], { inst, fn, arg });
@@ -3991,9 +3832,7 @@ function traverseTwoPhase(inst, fn, arg) {
   }
 }
 
-let getFiberCurrentPropsFromNode = null;
-let getInstanceFromNode = null;
-let getNodeFromInstance = null;
+topLevelFunctionsRegister.push('getNodeFromInstance$1');
 
 function getNodeFromInstance$1(inst) {
   logFuncUsage(['getNodeFromInstance$1'], { inst });
@@ -4003,11 +3842,15 @@ function getNodeFromInstance$1(inst) {
   }
 }
 
+topLevelFunctionsRegister.push('getFiberCurrentPropsFromNode$1');
+
 function getFiberCurrentPropsFromNode$1(node) {
   logFuncUsage(['getFiberCurrentPropsFromNode$1'], { node });
 
   return node[internalEventHandlersKey] || null;
 }
+
+topLevelFunctionsRegister.push('setComponentTree');
 
 function setComponentTree(
   getFiberCurrentPropsFromNodeImpl,
@@ -4029,6 +3872,7 @@ setComponentTree(
   () => {},
   getNodeFromInstance$1,
 );
+topLevelFunctionsRegister.push('getListener');
 
 function getListener(inst, registrationName) {
   logFuncUsage(['getListener'], { inst, registrationName });
@@ -4051,6 +3895,8 @@ function getListener(inst, registrationName) {
   return listener;
 }
 
+topLevelFunctionsRegister.push('listenerAtPhase');
+
 function listenerAtPhase(inst, event, propagationPhase) {
   logFuncUsage(['listenerAtPhase'], { inst, event, propagationPhase });
 
@@ -4059,6 +3905,8 @@ function listenerAtPhase(inst, event, propagationPhase) {
 
   return getListener(inst, registrationName);
 }
+
+topLevelFunctionsRegister.push('accumulateDirectionalDispatches');
 
 function accumulateDirectionalDispatches(inst, phase, event) {
   logFuncUsage(['accumulateDirectionalDispatches']);
@@ -4074,6 +3922,8 @@ function accumulateDirectionalDispatches(inst, phase, event) {
   }
 }
 
+topLevelFunctionsRegister.push('accumulateTwoPhaseDispatchesSingle');
+
 function accumulateTwoPhaseDispatchesSingle(event) {
   logFuncUsage(['accumulateTwoPhaseDispatchesSingle'], { event });
 
@@ -4081,6 +3931,8 @@ function accumulateTwoPhaseDispatchesSingle(event) {
     traverseTwoPhase(event._targetInst, accumulateDirectionalDispatches, event);
   }
 }
+
+topLevelFunctionsRegister.push('accumulateTwoPhaseDispatches');
 
 function accumulateTwoPhaseDispatches(events) {
   logFuncUsage(['accumulateTwoPhaseDispatches'], { events });
@@ -4118,14 +3970,15 @@ const SimpleEventPlugin = {
   },
 };
 
+topLevelFunctionsRegister.push('injectEventPluginOrder');
+
 function injectEventPluginOrder(injectedEventPluginOrder) {
   logFuncUsage(['injectEventPluginOrder'], { injectedEventPluginOrder });
   eventPluginOrder = Array.prototype.slice.call(injectedEventPluginOrder);
   recomputePluginOrdering();
 }
 
-const DOMEventPluginOrder = ['SimpleEventPlugin'];
-const eventPriorities = new Map();
+topLevelFunctionsRegister.push('processSimpleEventPluginPairsByPriority');
 
 function processSimpleEventPluginPairsByPriority(eventTypes, priority) {
   logFuncUsage(['processSimpleEventPluginPairsByPriority'], {
@@ -4153,7 +4006,7 @@ function processSimpleEventPluginPairsByPriority(eventTypes, priority) {
   }
 }
 
-const DiscreteEvent = 0;
+topLevelFunctionsRegister.push('unsafeCastStringToDOMTopLevelType');
 
 function unsafeCastStringToDOMTopLevelType(topLevelType) {
   logFuncUsage(['unsafeCastStringToDOMTopLevelType'], { topLevelType });
@@ -4180,29 +4033,5 @@ const OwnReact = {
   render,
   useState,
 };
-
-
-
-function logFuncUsage(...args) {
-  const [[name]] = args;
-
-  if (topLevelFunctionsRegister.includes(name)) {
-    if (topLevelFunctionsCallRegister[name]) {
-      topLevelFunctionsCallRegister[name]++;
-    } else {
-      topLevelFunctionsCallRegister[name] = 1;
-    }
-  } else {
-    missingNamesInRegister.push(name)
-    if (topLevelFunctionsCallRegister[name]) {
-      topLevelFunctionsCallRegister[name]++;
-    } else {
-      topLevelFunctionsCallRegister[name] = 1;
-    }
-  }
-
-  console.log(...args);
-}
-
 
 export default OwnReact;
