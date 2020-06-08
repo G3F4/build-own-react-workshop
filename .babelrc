@@ -2,18 +2,9 @@
   "plugins": [
     [
       "@babel/transform-react-jsx"
-    ],
-    "@babel/plugin-proposal-class-properties"
+    ]
   ],
   "presets": [
-    [
-      "env",
-      {
-        "targets": {
-          "node": "current"
-        }
-      }
-    ],
     [
       "@babel/preset-typescript",
       {

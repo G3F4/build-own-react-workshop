@@ -39,7 +39,6 @@ const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 const MATH_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const TEXT_NODE = 3;
-const COMMENT_NODE = 8;
 const DOCUMENT_NODE = 9;
 const DOCUMENT_FRAGMENT_NODE = 11;
 const UpdateState = 0;
@@ -52,10 +51,8 @@ const Placement = 2;
 const Update = 4;
 const PlacementAndUpdate = 6;
 const Deletion = 8;
-const ContentReset = 16;
 const Callback = 32;
 const DidCapture = 64;
-const Ref = 128;
 const Incomplete = 2048;
 const ShouldCapture = 4096;
 const FunctionComponent = 0;
@@ -69,7 +66,6 @@ const Namespaces = {
   mathml: MATH_NAMESPACE,
   svg: SVG_NAMESPACE,
 };
-const HTML_NAMESPACE$1 = Namespaces.html;
 const ReactCurrentOwner = {
   current: null,
 };
@@ -114,7 +110,6 @@ const valueStack = [];
 const fiberStack = [];
 let index = -1;
 let syncQueue = null;
-let effectCountInCurrentCommit = 0;
 const simpleEventPluginEventTypes = {};
 const topLevelEventsToDispatchConfig = new Map();
 let workInProgressRoot = null; // The root we're working on
@@ -179,7 +174,6 @@ const isUnitlessNumber = {
   strokeOpacity: true,
   strokeWidth: true,
 };
-let isFlushingSyncQueue = false;
 let immediateQueueCallbackNode = null;
 let isBatchingEventUpdates = false;
 
@@ -485,92 +479,19 @@ function getIntrinsicNamespace(type) {
 
 const contextStackCursor$1 = createCursor(NO_CONTEXT);
 
-topLevelFunctionsRegister.push('getChildNamespace');
-
-function getChildNamespace(parentNamespace, type) {
-  logFuncUsage(['getChildNamespace'], { parentNamespace, type });
-
-  if (parentNamespace == null || parentNamespace === HTML_NAMESPACE) {
-    return getIntrinsicNamespace(type);
-  }
-
-  if (parentNamespace === SVG_NAMESPACE && type === 'foreignObject') {
-    return HTML_NAMESPACE;
-  }
-
-  return parentNamespace;
-}
-
-topLevelFunctionsRegister.push('getRootHostContext');
-
-function getRootHostContext(rootContainerInstance) {
-  logFuncUsage(['getRootHostContext'], { rootContainerInstance });
-
-  let type;
-  let namespace;
-  const nodeType = rootContainerInstance.nodeType;
-
-  switch (nodeType) {
-    case DOCUMENT_NODE:
-    case DOCUMENT_FRAGMENT_NODE: {
-      type = nodeType === DOCUMENT_NODE ? '#document' : '#fragment';
-
-      const root = rootContainerInstance.documentElement;
-
-      namespace = root ? root.namespaceURI : getChildNamespace(null, '');
-
-      break;
-    }
-    default: {
-      const container =
-        nodeType === COMMENT_NODE
-          ? rootContainerInstance.parentNode
-          : rootContainerInstance;
-      const ownNamespace = container.namespaceURI || null;
-
-      type = container.tagName;
-      namespace = getChildNamespace(ownNamespace, type);
-
-      break;
-    }
-  }
-
-  return {
-    namespace: namespace,
-    ancestorInfo: '',
-  };
-}
-
 topLevelFunctionsRegister.push('pushHostContainer');
 
 function pushHostContainer(fiber, nextRootInstance) {
   logFuncUsage(['pushHostContainer'], { fiber, nextRootInstance });
   push(rootInstanceStackCursor, nextRootInstance, fiber);
 
-  const nextRootContext = getRootHostContext(nextRootInstance);
+  const nextRootContext = {
+    namespace: HTML_NAMESPACE,
+    ancestorInfo: '',
+  };
 
-  pop(contextStackCursor$1, fiber);
+  pop(contextStackCursor$1);
   push(contextStackCursor$1, nextRootContext, fiber);
-}
-
-topLevelFunctionsRegister.push('getStateFromUpdate');
-
-function cloneUpdateQueue(current, workInProgress) {
-  logFuncUsage(['getStateFromUpdate'], { current, workInProgress });
-
-  const queue = workInProgress.updateQueue;
-  const currentQueue = current.updateQueue;
-
-  if (queue === currentQueue) {
-    const clone = {
-      baseState: currentQueue.baseState,
-      baseQueue: currentQueue.baseQueue,
-      shared: currentQueue.shared,
-      effects: currentQueue.effects,
-    };
-
-    workInProgress.updateQueue = clone;
-  }
 }
 
 topLevelFunctionsRegister.push('getStateFromUpdate');
@@ -592,58 +513,7 @@ function getStateFromUpdate(
     instance,
   });
 
-  switch (update.tag) {
-    case ReplaceState: {
-      const payload = update.payload;
-
-      if (typeof payload === 'function') {
-        {
-          if (workInProgress.mode) {
-            payload.call(instance, prevState, nextProps);
-          }
-        }
-
-        const nextState = payload.call(instance, prevState, nextProps);
-
-        return nextState;
-      }
-
-      return payload;
-    }
-    case CaptureUpdate: {
-      workInProgress.effectTag =
-        (workInProgress.effectTag & ~ShouldCapture) | DidCapture;
-    }
-    case UpdateState: {
-      const _payload = update.payload;
-      let partialState;
-
-      if (typeof _payload === 'function') {
-        {
-          if (workInProgress.mode) {
-            _payload.call(instance, prevState, nextProps);
-          }
-        }
-
-        partialState = _payload.call(instance, prevState, nextProps);
-      } else {
-        partialState = _payload;
-      }
-
-      if (partialState === null || partialState === undefined) {
-        return prevState;
-      }
-
-      return Object.assign({}, prevState, partialState);
-    }
-    case ForceUpdate: {
-      hasForceUpdate = true;
-
-      return prevState;
-    }
-  }
-
-  return prevState;
+  return Object.assign({}, prevState, update.payload);
 }
 
 topLevelFunctionsRegister.push('processUpdateQueue');
@@ -659,14 +529,6 @@ function processUpdateQueue(workInProgress, props, instance) {
   let pendingQueue = queue.shared.pending;
 
   if (pendingQueue !== null) {
-    if (baseQueue !== null) {
-      const baseFirst = baseQueue.next;
-      const pendingFirst = pendingQueue.next;
-
-      baseQueue.next = pendingFirst;
-      pendingQueue.next = baseFirst;
-    }
-
     baseQueue = pendingQueue;
     queue.shared.pending = null;
 
@@ -685,89 +547,32 @@ function processUpdateQueue(workInProgress, props, instance) {
     const first = baseQueue.next;
     let newState = queue.baseState;
     let newBaseState = null;
-    let newBaseQueueFirst = null;
     let newBaseQueueLast = null;
 
     if (first !== null) {
       let update = first;
 
       do {
-        const updateExpirationTime = update.expirationTime;
-
-        if (updateExpirationTime < 123123123) {
-          const clone = {
-            expirationTime: update.expirationTime,
-            suspenseConfig: update.suspenseConfig,
-            tag: update.tag,
-            payload: update.payload,
-            callback: update.callback,
-            next: null,
-          };
-
-          if (newBaseQueueLast === null) {
-            newBaseQueueFirst = newBaseQueueLast = clone;
-            newBaseState = newState;
-          } else {
-            newBaseQueueLast = newBaseQueueLast.next = clone;
-          }
-        } else {
-          if (newBaseQueueLast !== null) {
-            const _clone = {
-              tag: update.tag,
-              payload: update.payload,
-              callback: update.callback,
-              next: null,
-            };
-
-            newBaseQueueLast = newBaseQueueLast.next = _clone;
-          }
-
-          newState = getStateFromUpdate(
-            workInProgress,
-            queue,
-            update,
-            newState,
-            props,
-            instance,
-          );
-
-          const callback = update.callback;
-
-          if (callback !== null) {
-            workInProgress.effectTag |= Callback;
-
-            const effects = queue.effects;
-
-            if (effects === null) {
-              queue.effects = [update];
-            } else {
-              effects.push(update);
-            }
-          }
-        }
+        newState = getStateFromUpdate(
+          workInProgress,
+          queue,
+          update,
+          newState,
+          props,
+          instance,
+        );
 
         update = update.next;
 
         if (update === null || update === first) {
           pendingQueue = queue.shared.pending;
 
-          if (pendingQueue === null) {
-            break;
-          } else {
-            update = baseQueue.next = pendingQueue.next;
-            pendingQueue.next = first;
-            queue.baseQueue = baseQueue = pendingQueue;
-            queue.shared.pending = null;
-          }
+          break;
         }
       } while (true);
     }
 
-    if (newBaseQueueLast === null) {
-      newBaseState = newState;
-    } else {
-      newBaseQueueLast.next = newBaseQueueFirst;
-    }
+    newBaseState = newState;
 
     queue.baseState = newBaseState;
     queue.baseQueue = newBaseQueueLast;
@@ -813,7 +618,6 @@ function updateHostRoot(current, workInProgress) {
 
   const nextProps = workInProgress.pendingProps;
 
-  cloneUpdateQueue(current, workInProgress);
   processUpdateQueue(workInProgress, nextProps, null);
 
   const nextState = workInProgress.memoizedState;
@@ -1178,12 +982,10 @@ function beginWork(current, workInProgress) {
       );
     }
     case FunctionComponent: {
-      const _Component = workInProgress.type;
-
       return updateFunctionComponent(
         current,
         workInProgress,
-        _Component,
+        workInProgress.type,
         workInProgress.pendingProps,
       );
     }
@@ -1244,11 +1046,11 @@ function createInstance(
     let domElement;
     let namespaceURI = parentNamespace;
 
-    if (namespaceURI === HTML_NAMESPACE$1) {
+    if (namespaceURI === HTML_NAMESPACE) {
       namespaceURI = getIntrinsicNamespace(type);
     }
 
-    if (namespaceURI === HTML_NAMESPACE$1) {
+    if (namespaceURI === HTML_NAMESPACE) {
       if (typeof props.is === 'string') {
         domElement = ownerDocument.createElement(type, {
           is: props.is,
@@ -2850,16 +2652,6 @@ function setCurrentFiber(fiber) {
   isRendering = false;
 }
 
-topLevelFunctionsRegister.push('recordEffect');
-
-function recordEffect() {
-  logFuncUsage(['recordEffect']);
-
-  {
-    effectCountInCurrentCommit++;
-  }
-}
-
 topLevelFunctionsRegister.push('isHostParent');
 
 function isHostParent(fiber) {
@@ -3360,16 +3152,12 @@ function commitMutationEffects(root) {
         commitPlacement(nextEffect);
         nextEffect.effectTag &= ~Placement;
 
-        const _current = nextEffect.alternate;
-
-        commitWork(_current, nextEffect);
+        commitWork(nextEffect.alternate, nextEffect);
 
         break;
       }
       case Update: {
-        const _current3 = nextEffect.alternate;
-
-        commitWork(_current3, nextEffect);
+        commitWork(nextEffect.alternate, nextEffect);
 
         break;
       }
@@ -3380,7 +3168,6 @@ function commitMutationEffects(root) {
       }
     }
 
-    recordEffect();
     resetCurrentFiber();
     nextEffect = nextEffect.nextEffect;
   }
@@ -3932,13 +3719,6 @@ function accumulateTwoPhaseDispatchesSingle(event) {
   }
 }
 
-topLevelFunctionsRegister.push('accumulateTwoPhaseDispatches');
-
-function accumulateTwoPhaseDispatches(events) {
-  logFuncUsage(['accumulateTwoPhaseDispatches'], { events });
-  forEachAccumulated(events, accumulateTwoPhaseDispatchesSingle);
-}
-
 const SimpleEventPlugin = {
   eventTypes: simpleEventPluginEventTypes,
   extractEvents: function (
@@ -3964,7 +3744,7 @@ const SimpleEventPlugin = {
       nativeEventTarget,
     );
 
-    accumulateTwoPhaseDispatches(event);
+    forEachAccumulated(event, accumulateTwoPhaseDispatchesSingle);
 
     return event;
   },
