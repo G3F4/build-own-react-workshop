@@ -162,11 +162,6 @@ function commitWork(fiber) {
   commitWork(fiber.sibling);
 }
 
-function commitRoot() {
-  console.log(['commitRoot']);
-  commitWork(workInProgressRoot.child);
-}
-
 function performSyncWorkOnRoot() {
   if (workInProgress !== null) {
     while (workInProgress !== null) {
@@ -174,7 +169,7 @@ function performSyncWorkOnRoot() {
     }
 
     workInProgressRoot.finishedWork = workInProgressRoot;
-    commitRoot();
+    commitWork(workInProgressRoot.child);
   }
 
   requestIdleCallback(performSyncWorkOnRoot);
