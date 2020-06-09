@@ -46,24 +46,6 @@ function reconcileChildren(wipFiber, children) {
   }
 }
 
-function createInstance(type) {
-  return document.createElement(type);
-}
-
-function completeWork(workInProgress) {
-  switch (workInProgress.tag) {
-    case FunctionComponent:
-    case HostRoot: {
-      return null;
-    }
-    case HostComponent: {
-      workInProgress.stateNode = createInstance(workInProgress.type);
-
-      return null;
-    }
-  }
-}
-
 function completeUnitOfWork(unitOfWork) {
   console.log(['completeUnitOfWork'], { unitOfWork });
   workInProgress = unitOfWork;
@@ -71,7 +53,9 @@ function completeUnitOfWork(unitOfWork) {
   do {
     const returnFiber = workInProgress.return;
 
-    completeWork(workInProgress);
+    if (workInProgress.tag === HostComponent) {
+      workInProgress.stateNode = document.createElement(workInProgress.type);
+    }
 
     const siblingFiber = workInProgress.sibling;
 
@@ -85,38 +69,24 @@ function completeUnitOfWork(unitOfWork) {
   return null;
 }
 
-function updateFunctionComponent(unitOfWork) {
-  reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
+function beginWork(unitOfWork) {
+  console.log(['beginWork'], { unitOfWork });
 
-  return unitOfWork.child;
-}
-
-function updateHostRoot(unitOfWork) {
-  reconcileChildren(unitOfWork, unitOfWork.props.children);
-
-  return unitOfWork.child;
-}
-
-function updateHostComponent(unitOfWork) {
-  reconcileChildren(unitOfWork, unitOfWork.props.children);
-
-  return unitOfWork.child;
-}
-
-function beginWork(workInProgress) {
-  console.log(['beginWork'], { workInProgress });
-
-  switch (workInProgress.tag) {
+  switch (unitOfWork.tag) {
     case FunctionComponent: {
-      return updateFunctionComponent(workInProgress);
+      reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
+
+      break;
     }
-    case HostRoot: {
-      return updateHostRoot(workInProgress);
-    }
+    case HostRoot:
     case HostComponent: {
-      return updateHostComponent(workInProgress);
+      reconcileChildren(unitOfWork, unitOfWork.props.children);
+
+      break;
     }
   }
+
+  return unitOfWork.child;
 }
 
 function performUnitOfWork(unitOfWork) {
@@ -131,16 +101,6 @@ function performUnitOfWork(unitOfWork) {
   }
 
   return next;
-}
-
-function workLoopSync() {
-  console.log(['workLoopSync']);
-
-  while (workInProgress !== null) {
-    const work = performUnitOfWork(workInProgress);
-
-    workInProgress = work;
-  }
 }
 
 function render(element, container) {
@@ -216,7 +176,9 @@ function commitRoot() {
 
 function performSyncWorkOnRoot() {
   if (workInProgress !== null) {
-    workLoopSync();
+    while (workInProgress !== null) {
+      workInProgress = performUnitOfWork(workInProgress);
+    }
 
     workInProgressRoot.finishedWork = workInProgressRoot;
     commitRoot();
@@ -231,30 +193,15 @@ function useState(initialState) {
   return [initialState, (currentState) => currentState];
 }
 
-function createElement(type, config, children) {
+function createElement(type, config, ...children) {
   console.log(['createElement'], { type, config, children, arguments });
 
-  let propName;
-  const props = {};
+  const props = config || {};
 
-  if (config != null) {
-    for (propName in config) {
-      props[propName] = config[propName];
-    }
-  }
-
-  const childrenLength = arguments.length - 2;
-
-  if (childrenLength === 1) {
+  if (children.length === 1) {
+    props.children = children[0];
+  } else if (children.length > 1) {
     props.children = children;
-  } else if (childrenLength > 1) {
-    const childArray = Array(childrenLength);
-
-    for (let i = 0; i < childrenLength; i++) {
-      childArray[i] = arguments[i + 2];
-    }
-
-    props.children = childArray;
   }
 
   return {
