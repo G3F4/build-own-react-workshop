@@ -42,30 +42,19 @@ const TEXT_NODE = 3;
 const DOCUMENT_NODE = 9;
 const DOCUMENT_FRAGMENT_NODE = 11;
 const UpdateState = 0;
-const ReplaceState = 1;
-const ForceUpdate = 2;
-const CaptureUpdate = 3;
 const NoEffect = 0;
 const PerformedWork = 1;
 const Placement = 2;
 const Update = 4;
 const PlacementAndUpdate = 6;
 const Deletion = 8;
-const Callback = 32;
-const DidCapture = 64;
 const Incomplete = 2048;
-const ShouldCapture = 4096;
 const FunctionComponent = 0;
 const IndeterminateComponent = 2;
 const HostRoot = 3;
 const HostComponent = 5;
 const HostText = 6;
 let currentlyRenderingFiber$1 = null;
-const Namespaces = {
-  html: HTML_NAMESPACE,
-  mathml: MATH_NAMESPACE,
-  svg: SVG_NAMESPACE,
-};
 const ReactCurrentOwner = {
   current: null,
 };
@@ -79,7 +68,6 @@ let HooksDispatcherOnUpdateInDEV = null;
 const InvalidNestedHooksDispatcherOnMountInDEV = null;
 const InvalidNestedHooksDispatcherOnUpdateInDEV = null;
 let currentHookNameInDev = null;
-const LegacyRoot = 0;
 const DiscreteEvent = 0;
 let hasForceUpdate = false;
 let currentlyProcessingQueue;
@@ -125,7 +113,6 @@ const HTML$1 = '__html';
 const STYLE = 'style';
 const isArray$1 = Array.isArray;
 let performUnitOfWorkCounter = 0;
-let current = null;
 let nextEffect = null;
 const DANGEROUSLY_SET_INNER_HTML = 'dangerouslySetInnerHTML';
 const AUTOFOCUS = 'autoFocus';
@@ -223,7 +210,7 @@ function createElement(type, config, children) {
     }
 
     props.children = childArray;
-  } // Resolve default props
+  }
 
   return ReactElement(type, props);
 }
@@ -262,49 +249,27 @@ function createFiber(tag, pendingProps, key) {
   return new FiberNode(tag, pendingProps, key);
 }
 
-topLevelFunctionsRegister.push('FiberRootNode');
-
-function FiberRootNode(containerInfo) {
-  logFuncUsage(['FiberRootNode'], { containerInfo });
-  this.tag = LegacyRoot;
-  this.current = null;
-  this.containerInfo = containerInfo;
-  this.finishedWork = null;
-}
-
-topLevelFunctionsRegister.push('createHostRootFiber');
-
-function createHostRootFiber() {
-  logFuncUsage(['createHostRootFiber']);
-
-  return createFiber(HostRoot, null, null);
-}
-
-topLevelFunctionsRegister.push('initializeUpdateQueue');
-
-function initializeUpdateQueue(fiber) {
-  logFuncUsage(['initializeUpdateQueue'], { fiber });
-  fiber.updateQueue = {
-    baseState: fiber.memoizedState,
-    baseQueue: null,
-    shared: {
-      pending: null,
-    },
-    effects: null,
-  };
-}
-
 topLevelFunctionsRegister.push('createFiberRoot');
 
 function createFiberRoot(containerInfo) {
   logFuncUsage(['createFiberRoot'], { containerInfo });
 
-  const root = new FiberRootNode(containerInfo);
-  const uninitializedFiber = createHostRootFiber();
+  const current = createFiber(HostRoot, null, null);
+  const root = {
+    current,
+    finishedWork: null,
+    containerInfo: containerInfo,
+  };
 
-  root.current = uninitializedFiber;
-  uninitializedFiber.stateNode = root;
-  initializeUpdateQueue(uninitializedFiber);
+  current.stateNode = root;
+  current.updateQueue = {
+    shared: {
+      pending: null,
+    },
+    // baseState: null,
+    // baseQueue: null,
+    // effects: null,
+  };
 
   return root;
 }
@@ -547,7 +512,7 @@ function processUpdateQueue(workInProgress, props, instance) {
     const first = baseQueue.next;
     let newState = queue.baseState;
     let newBaseState = null;
-    let newBaseQueueLast = null;
+    const newBaseQueueLast = null;
 
     if (first !== null) {
       let update = first;
@@ -620,8 +585,7 @@ function updateHostRoot(current, workInProgress) {
 
   processUpdateQueue(workInProgress, nextProps, null);
 
-  const nextState = workInProgress.memoizedState;
-  const nextChildren = nextState.element;
+  const nextChildren = workInProgress.memoizedState.element;
 
   reconcileChildren(current, workInProgress, nextChildren);
 
@@ -2484,6 +2448,7 @@ topLevelFunctionsRegister.push('completeUnitOfWork');
 
 function completeUnitOfWork(unitOfWork) {
   logFuncUsage(['completeUnitOfWork'], { unitOfWork });
+  console.log(['completeUnitOfWork'], { unitOfWork });
   workInProgress = unitOfWork;
 
   do {
@@ -2538,12 +2503,12 @@ topLevelFunctionsRegister.push('performUnitOfWork');
 
 function performUnitOfWork(unitOfWork) {
   logFuncUsage(['performUnitOfWork'], performUnitOfWorkCounter, { unitOfWork });
+  console.log(['performUnitOfWork'], performUnitOfWorkCounter, { unitOfWork });
   performUnitOfWorkCounter++;
 
-  const current = unitOfWork.alternate;
   let next;
 
-  next = beginWork(current, unitOfWork);
+  next = beginWork(unitOfWork.alternate, unitOfWork);
 
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
 
@@ -2634,22 +2599,6 @@ function resetAfterCommit() {
   eventsEnabled = null;
 
   selectionInformation = null;
-}
-
-topLevelFunctionsRegister.push('resetCurrentFiber');
-
-function resetCurrentFiber() {
-  logFuncUsage(['resetCurrentFiber']);
-  current = null;
-  isRendering = false;
-}
-
-topLevelFunctionsRegister.push('setCurrentFiber');
-
-function setCurrentFiber(fiber) {
-  logFuncUsage(['setCurrentFiber'], { fiber });
-  current = fiber;
-  isRendering = false;
 }
 
 topLevelFunctionsRegister.push('isHostParent');
@@ -3134,10 +3083,7 @@ function commitMutationEffects(root) {
   logFuncUsage(['commitMutationEffects'], { root });
 
   while (nextEffect !== null) {
-    setCurrentFiber(nextEffect);
-
     const effectTag = nextEffect.effectTag;
-
     const primaryEffectTag = effectTag & (Placement | Update | Deletion);
 
     switch (primaryEffectTag) {
@@ -3168,7 +3114,6 @@ function commitMutationEffects(root) {
       }
     }
 
-    resetCurrentFiber();
     nextEffect = nextEffect.nextEffect;
   }
 }
@@ -3272,7 +3217,6 @@ function flushSyncCallbackQueue() {
   immediateQueueCallbackNode = null;
 
   let i = 0;
-
   const _isSync = true;
   const queue = syncQueue;
 
@@ -3305,6 +3249,7 @@ topLevelFunctionsRegister.push('updateContainer');
 
 function updateContainer(element, container, parentComponent) {
   logFuncUsage(['updateContainer'], { element, container, parentComponent });
+  console.log(['updateContainer'], { element, container, parentComponent });
 
   const update = createUpdate();
 
@@ -3319,9 +3264,11 @@ function updateContainer(element, container, parentComponent) {
 topLevelFunctionsRegister.push('render');
 
 function render(element, container) {
+  console.log(['render'], { element, container });
   logFuncUsage(['render'], { element, container });
 
   const fiberRoot = createFiberRoot(container);
+  console.log(['render.fiberRoot'], fiberRoot);
 
   updateContainer(element, fiberRoot, null);
 

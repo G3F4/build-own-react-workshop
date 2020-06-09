@@ -11,8 +11,8 @@ module.exports = {
   },
   resolve: {
     alias: {
-      react: path.resolve(__dirname, 'lib/OwnReact3.ts'),
-      'react-dom': path.resolve(__dirname, 'lib/OwnReact3.ts'),
+      react: path.resolve(__dirname, 'lib/MinReact.ts'),
+      'react-dom': path.resolve(__dirname, 'lib/MinReact.ts'),
     },
   },
   module: {
