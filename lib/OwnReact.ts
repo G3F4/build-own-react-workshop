@@ -9,11 +9,10 @@ function reconcileChildren(wipFiber, children) {
 
   if (Array.isArray(children) || typeof children === 'object') {
     let index = 0;
-    let oldFiber = wipFiber.alternate && wipFiber.alternate.child;
     let prevSibling = null;
     const elements = Array.isArray(children) ? children : [children];
 
-    while (index < elements.length || oldFiber != null) {
+    while (index < elements.length) {
       const element = elements[index];
       const newFiber = {
         tag:
@@ -24,13 +23,8 @@ function reconcileChildren(wipFiber, children) {
         props: element.props,
         stateNode: null,
         return: wipFiber,
-        alternate: null,
         sibling: null,
       };
-
-      if (oldFiber) {
-        oldFiber = oldFiber.sibling;
-      }
 
       if (index === 0) {
         wipFiber.child = newFiber;
@@ -111,7 +105,6 @@ function render(element, container) {
     props: {
       children: [element],
     },
-    alternate: workInProgressRoot,
     sibling: null,
     return: null,
     child: null,
