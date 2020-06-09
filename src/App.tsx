@@ -7,11 +7,13 @@ function GrowingButton({ label, visible }) {
     return null;
   }
 
+  function grow() {
+    console.log(['grow']);
+    setButtonSize((size) => size + 1);
+  }
+
   return (
-    <button
-      style={{ fontSize: `${buttonSize}px` }}
-      onClick={() => setButtonSize((size) => size + 1)}
-    >
+    <button style={{ fontSize: `${buttonSize}px` }} onClick={grow}>
       {label}
     </button>
   );
@@ -22,18 +24,22 @@ function App() {
   const [visible, setVisible] = React.useState(true);
 
   function disappear() {
+    console.log(['disappear']);
     setVisible(() => false);
   }
 
   function appear() {
+    console.log(['appear']);
     setVisible(() => true);
   }
 
   function increase() {
+    console.log(['increase']);
     setCount((c) => c + 1);
   }
 
   function decrease() {
+    console.log(['decrease']);
     setCount((c) => c - 1);
   }
 

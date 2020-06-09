@@ -1,7 +1,6 @@
 const FunctionComponent = 0;
 const HostRoot = 3;
 const HostComponent = 5;
-const HostText = 6;
 let workInProgressRoot = null; // The root we're working on
 let workInProgress = null; // The fiber we're working on
 
@@ -16,9 +15,6 @@ function reconcileChildren(wipFiber, children) {
 
     while (index < elements.length || oldFiber != null) {
       const element = elements[index];
-
-      console.log(['element.type'], element.type);
-
       const newFiber = {
         tag:
           typeof element.type === 'function'
@@ -30,7 +26,6 @@ function reconcileChildren(wipFiber, children) {
         return: wipFiber,
         alternate: null,
         sibling: null,
-        effectTag: 'PLACEMENT',
       };
 
       if (oldFiber) {
@@ -164,6 +159,32 @@ function render(element, container) {
   workInProgress = workInProgressRoot;
 }
 
+const isEvent = (key) => key.startsWith('on');
+const isChildren = (key) => key === 'children';
+const isStyle = (key) => key === 'style';
+const isTextContent = (prop) =>
+  typeof prop === 'string' || typeof prop === 'number';
+
+function updateProperties(fiber) {
+  Object.keys(fiber.props).forEach((name) => {
+    const prop = fiber.props[name];
+
+    if (isTextContent(prop)) {
+      fiber.stateNode.textContent = prop;
+    } else if (isEvent(name)) {
+      const eventType = name.toLowerCase().substring(2);
+
+      fiber.stateNode.addEventListener(eventType, fiber.props[name]);
+    } else if (isStyle(name)) {
+      Object.entries(prop).forEach(([key, value]) => {
+        fiber.stateNode.style[key] = value;
+      });
+    } else if (!isChildren(name)) {
+      fiber.stateNode[name] = fiber.props[name];
+    }
+  });
+}
+
 function commitWork(fiber) {
   console.log(['commitWork'], { fiber });
 
@@ -179,8 +200,9 @@ function commitWork(fiber) {
 
   const domParent = domParentFiber.stateNode;
 
-  if (fiber.effectTag === 'PLACEMENT' && fiber.stateNode != null) {
+  if (fiber.stateNode != null) {
     domParent.appendChild(fiber.stateNode);
+    updateProperties(fiber);
   }
 
   commitWork(fiber.child);

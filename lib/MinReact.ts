@@ -995,6 +995,7 @@ function createInstance(
   hostContext,
   internalInstanceHandle,
 ) {
+  console.log(['createInstance'], type)
   logFuncUsage(['createInstance'], {
     type,
     props,
@@ -2788,6 +2789,7 @@ function dangerousStyleValue(name, value, isCustomProperty) {
 topLevelFunctionsRegister.push('setValueForStyles');
 
 function setValueForStyles(node, styles) {
+  console.log(['setValueForStyles'], { node, styles });
   logFuncUsage(['setValueForStyles'], { node, styles });
 
   const style = node.style;
@@ -3080,6 +3082,7 @@ function unmountHostComponents(finishedRoot, current) {
 topLevelFunctionsRegister.push('commitMutationEffects');
 
 function commitMutationEffects(root) {
+  console.log(['commitMutationEffects'], { root });
   logFuncUsage(['commitMutationEffects'], { root });
 
   while (nextEffect !== null) {
