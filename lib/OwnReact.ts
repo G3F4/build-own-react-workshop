@@ -119,6 +119,8 @@ const isTextContent = (prop) =>
   typeof prop === 'string' || typeof prop === 'number';
 
 function updateProperties(fiber) {
+  console.log(['updateProperties'], { fiber });
+
   Object.keys(fiber.props).forEach((name) => {
     const prop = fiber.props[name];
 
@@ -177,12 +179,8 @@ function performSyncWorkOnRoot() {
 
 requestIdleCallback(performSyncWorkOnRoot);
 
-function useState(initialState) {
-  return [initialState, (currentState) => currentState];
-}
-
 function createElement(type, config, ...children) {
-  console.log(['createElement'], { type, config, children, arguments });
+  console.log(['createElement'], { type, config, children });
 
   const props = config || {};
 
@@ -200,6 +198,5 @@ function createElement(type, config, ...children) {
 
 export default {
   createElement,
-  useState,
   render,
 };
