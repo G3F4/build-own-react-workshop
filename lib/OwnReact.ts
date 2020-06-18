@@ -4,44 +4,37 @@ const HostComponent = 5;
 let workInProgressRoot = null; // The root we're working on
 let workInProgress = null; // The fiber we're working on
 
-function reconcileChildren(wipFiber, children) {
-  console.log(['reconcileChildren'], { wipFiber, children });
-
+function reconcileChildren(fiber, children) {
   if (Array.isArray(children) || typeof children === 'object') {
-    let index = 0;
-    let prevSibling = null;
+    let previousFiber = null;
     const elements = Array.isArray(children) ? children : [children];
 
-    while (index < elements.length) {
-      const element = elements[index];
+    elements.forEach((element, index) => {
+      const tag =
+        typeof element.type === 'function' ? FunctionComponent : HostComponent;
       const newFiber = {
-        tag:
-          typeof element.type === 'function'
-            ? FunctionComponent
-            : HostComponent,
+        tag,
         type: element.type,
         props: element.props,
-        stateNode: null,
-        return: wipFiber,
+        return: fiber,
         sibling: null,
+        stateNode: null,
       };
 
       if (index === 0) {
-        wipFiber.child = newFiber;
+        fiber.child = newFiber;
       } else if (element) {
-        prevSibling.sibling = newFiber;
+        previousFiber.sibling = newFiber;
       }
 
-      prevSibling = newFiber;
-      index++;
-    }
+      previousFiber = newFiber;
+    });
   } else {
-    wipFiber.child = null;
+    fiber.child = null;
   }
 }
 
 function completeUnitOfWork(unitOfWork) {
-  console.log(['completeUnitOfWork'], { unitOfWork });
   workInProgress = unitOfWork;
 
   do {
@@ -64,8 +57,6 @@ function completeUnitOfWork(unitOfWork) {
 }
 
 function beginWork(unitOfWork) {
-  console.log(['beginWork'], { unitOfWork });
-
   switch (unitOfWork.tag) {
     case FunctionComponent: {
       reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
@@ -84,11 +75,7 @@ function beginWork(unitOfWork) {
 }
 
 function performUnitOfWork(unitOfWork) {
-  console.log(['performUnitOfWork'], { unitOfWork });
-
-  let next;
-
-  next = beginWork(unitOfWork);
+  let next = beginWork(unitOfWork);
 
   if (next === null) {
     next = completeUnitOfWork(unitOfWork);
@@ -98,7 +85,6 @@ function performUnitOfWork(unitOfWork) {
 }
 
 function render(element, container) {
-  console.log(['render'], { element, container });
   workInProgressRoot = {
     tag: HostRoot,
     stateNode: container,
@@ -112,14 +98,12 @@ function render(element, container) {
   workInProgress = workInProgressRoot;
 }
 
-const isEvent = (key) => key.startsWith('on');
-const isChildren = (key) => key === 'children';
-const isStyle = (key) => key === 'style';
-const isTextContent = (prop) =>
-  typeof prop === 'string' || typeof prop === 'number';
-
 function updateProperties(fiber) {
-  console.log(['updateProperties'], { fiber });
+  const isEvent = (key) => key.startsWith('on');
+  const isChildren = (key) => key === 'children';
+  const isStyle = (key) => key === 'style';
+  const isTextContent = (prop) =>
+    typeof prop === 'string' || typeof prop === 'number';
 
   Object.keys(fiber.props).forEach((name) => {
     const prop = fiber.props[name];
@@ -141,27 +125,21 @@ function updateProperties(fiber) {
 }
 
 function commitWork(fiber) {
-  console.log(['commitWork'], { fiber });
+  let parentFiber = fiber.return;
 
-  if (!fiber) {
-    return;
+  while (!parentFiber.stateNode) {
+    parentFiber = parentFiber.return;
   }
 
-  let domParentFiber = fiber.return;
-
-  while (!domParentFiber.stateNode) {
-    domParentFiber = domParentFiber.return;
-  }
-
-  const domParent = domParentFiber.stateNode;
+  const domParent = parentFiber.stateNode;
 
   if (fiber.stateNode != null) {
     domParent.appendChild(fiber.stateNode);
     updateProperties(fiber);
   }
 
-  commitWork(fiber.child);
-  commitWork(fiber.sibling);
+  fiber.child && commitWork(fiber.child);
+  fiber.sibling && commitWork(fiber.sibling);
 }
 
 function performSyncWorkOnRoot() {
@@ -171,7 +149,7 @@ function performSyncWorkOnRoot() {
     }
 
     workInProgressRoot.finishedWork = workInProgressRoot;
-    commitWork(workInProgressRoot.child);
+    workInProgressRoot.child && commitWork(workInProgressRoot.child);
   }
 
   requestIdleCallback(performSyncWorkOnRoot);
@@ -180,19 +158,12 @@ function performSyncWorkOnRoot() {
 requestIdleCallback(performSyncWorkOnRoot);
 
 function createElement(type, config, ...children) {
-  console.log(['createElement'], { type, config, children });
-
-  const props = config || {};
-
-  if (children.length === 1) {
-    props.children = children[0];
-  } else if (children.length > 1) {
-    props.children = children;
-  }
-
   return {
     type,
-    props,
+    props: {
+      ...(config || {}),
+      children: children.length === 1 ? children[0] : children,
+    },
   };
 }
 
