@@ -1,3 +1,26 @@
+type Props = Record<
+  string,
+  | string
+  | EventListenerOrEventListenerObject
+  | Record<string, string>
+  | ReactElement
+>;
+
+interface Fiber {
+  tag: number;
+  stateNode: HTMLElement | null;
+  type: Function | string;
+  props: Props;
+  return: Fiber | null;
+  sibling: Fiber | null;
+  child: Fiber | null;
+}
+
+interface ReactElement {
+  type: Function | string;
+  props: Props;
+}
+
 const FunctionComponent = 0; // stała reprezentująca rodzaj Fibera z komponentem funkcyjnym
 const HostRoot = 3; // stała reprezentująca rodzaj Fibera z elementem DOM kontenera aplikacji
 const HostComponent = 5; // stała reprezentująca rodzaj Fibera z elementem DOM
@@ -10,7 +33,7 @@ wykorzystując wcześniej stworzone powiązania, przechodzi po wszystkich Fibera
 i dla każdego Fibera, który reprezentuje element DOM
 tworzy ten element i zapisuje referencje w polu `stateNode`
 */
-function completeUnitOfWork(unitOfWork) {
+function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['completeUnitOfWork'], unitOfWork);
   // ustawiamy aktualną jednostkę pracy
   workInProgress = unitOfWork;
@@ -48,7 +71,7 @@ function completeUnitOfWork(unitOfWork) {
 funkcja aktualizująca właściwości elementu DOM związanego z Fiberem
 jako argument dostaje Fiber
 */
-function updateProperties(fiber) {
+function updateProperties(fiber: Fiber): void {
   console.log(['updateProperties'], { fiber });
 
   // funkcja pomocnicza sprawdzająca czy props jest eventem
@@ -64,14 +87,17 @@ function updateProperties(fiber) {
     // jeśli prop jest zwykłym tekstem
     if (isTextContent(prop)) {
       // ustawiamy atrybut textContent elementu DOM związanego z Fiberem
-      fiber.stateNode.textContent = prop;
+      fiber.stateNode.textContent = prop as string;
       // jeśli prop jest eventem
     } else if (isEvent(name)) {
       // zamieniamy wszystkie znaki nazwy eventu na małe i pomijamy prefix "on"
       const eventType = name.toLowerCase().substring(2);
 
       // tak przygotowaną nazwę eventu wykorzystujemy aby zacząć nasłuchiwać na event
-      fiber.stateNode.addEventListener(eventType, fiber.props[name]);
+      fiber.stateNode.addEventListener(
+        eventType,
+        fiber.props[name] as EventListenerOrEventListenerObject,
+      );
       // jeśli prop jest obiektem styli
     } else if (isStyle(name)) {
       // iterujemy do wszystkich stylach w obiekcie
@@ -87,7 +113,7 @@ function updateProperties(fiber) {
 funkcja dołącza do najbliższego rodzica elementu DOM znalezionego w wzwyż w hierarchii Fiberów
 jako argument dostaje Fiber, który jest aktualnie iterowany podczas rekurencyjnego przeglądania struktury Fiberów
 */
-function commitWork(fiber) {
+function commitWork(fiber: Fiber): void {
   console.log(['commitWork'], { fiber });
 
   // jeśli aktualny Fiber jest związany z elementem DOM
@@ -117,7 +143,7 @@ function commitWork(fiber) {
 funkcja tworząca powiązania Fibera do jego dzieci w postaci powiązanych Fiberów
 w procesie dla wszystkich dzieci Fibera zostaną utworzone własne Fibery
 */
-function reconcileChildren(fiber, children) {
+function reconcileChildren(fiber: Fiber, children: unknown): void {
   console.log(['reconcileChildren'], { fiber, children });
 
   // jeśli argument children jest tablicą lub obiektem, możemy rozpocząć proces rekoncyliacji
@@ -125,7 +151,9 @@ function reconcileChildren(fiber, children) {
     // zmienna pomocnicza przechowująca referencję do ostatnio utworzonego Fibera
     let previousFiber = null;
     // tablica dzieci, jeśli argument children nie jest tablicą, tworzymy z niego jednoelementową tablicę
-    const elements = Array.isArray(children) ? children : [children];
+    const elements: ReactElement[] = Array.isArray(children)
+      ? children
+      : [children];
 
     // iterujemy po wszystkich dzieciach(elementy React)
     elements.forEach((element, index) => {
@@ -159,7 +187,7 @@ funkcja rozpoczynająca pracę
 jako argument dostaje Fiber
 zwraca dziecko Fibera po wykonaniu procesu rekoncyliacji(org. reconciliation)
 */
-function beginWork(unitOfWork) {
+function beginWork(unitOfWork: Fiber): Fiber | null {
   console.log(['beginWork'], { unitOfWork });
 
   // w zależności od taga Fibera
@@ -168,7 +196,9 @@ function beginWork(unitOfWork) {
     case FunctionComponent: {
       // wywołujemy typ Fibera, który jest funkcją zwracającą tablicę elementów
       // i rozpoczynamy proces rekoncyliacji
-      reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
+      if (typeof unitOfWork.type === 'function') {
+        reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
+      }
 
       break;
     }
@@ -191,7 +221,7 @@ wykonuje jednostkę pracy
 jako argument dostaje Fiber
 zwraca następną jednostkę pracy
 */
-function performUnitOfWork(unitOfWork) {
+function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['performUnitOfWork'], { unitOfWork });
 
   // rozpoczynamy pracę i wynik umieszczamy w zmiennej
@@ -214,7 +244,7 @@ function performUnitOfWork(unitOfWork) {
 funkcja rozpoczyna pracę na root'cie, czyli Fiberem związanych z kontenerem aplikacji (<div id="root" />)
 efektem końcowym jest wyrenderowana aplikacja (DOM)
 */
-function performSyncWorkOnRoot() {
+function performSyncWorkOnRoot(): void {
   workInProgress && console.log(['performSyncWorkOnRoot']);
 
   // jeśli jest jakaś praca do wykonania
@@ -249,7 +279,12 @@ parentFiber - Fiber rodzica
 stateNode - element DOM, z którym powiązany jest tworzony Fiber
 zwraca nowy Fiber
 */
-function createFiber({ element, tag, parentFiber = null, stateNode = null }) {
+function createFiber({
+  element,
+  tag,
+  parentFiber = null,
+  stateNode = null,
+}): Fiber {
   console.log(['createFiber'], { element, tag, parentFiber, stateNode });
 
   return {
@@ -272,7 +307,7 @@ jako argumenty dostajemy kolejno:
 
 zwraca element React, który składa się z propsów oraz typu elementu
 */
-function createElement(type, props, ...children) {
+function createElement(type, props, ...children): ReactElement {
   console.log(['createElement'], { type, props, children });
 
   return {
@@ -287,7 +322,7 @@ function createElement(type, props, ...children) {
 /*
 funkcja tworząca pierwszą jednostkę pracy, która jest związana z kontenerem aplikacji
 */
-function render(element, container) {
+function render(element: ReactElement, container: HTMLElement) {
   console.log(['render'], { element, container });
   // tworzymy Fiber związany z kontenerem aplikacji i zapisujemy referencję
   workInProgressRoot = createFiber({
