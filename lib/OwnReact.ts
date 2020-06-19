@@ -69,6 +69,8 @@ w procesie dla wszystkich dzieci Fibera zostaną utworzone własne Fibery
 function reconcileChildren(fiber: Fiber, children: unknown): void {
   console.log(['reconcileChildren'], { fiber, children });
   // TODO
+
+  return null;
 }
 
 /*
@@ -78,9 +80,31 @@ zwraca dziecko Fibera po wykonaniu procesu rekoncyliacji(org. reconciliation)
 */
 function beginWork(unitOfWork: Fiber): Fiber | null {
   console.log(['beginWork'], { unitOfWork });
-  // TODO
 
-  return null;
+  // w zależności od taga Fibera
+  switch (unitOfWork.tag) {
+    // dla Fibera, który reprezentuje komponentem funkcyjny
+    case FunctionComponent: {
+      // wywołujemy typ Fibera, który jest funkcją zwracającą tablicę elementów
+      // i rozpoczynamy proces rekoncyliacji
+      if (typeof unitOfWork.type === 'function') {
+        reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
+      }
+
+      break;
+    }
+    // dla Fibera związanego z głównym elementem DOM oraz zwykłym elementem DOM
+    case HostRoot:
+    case HostComponent: {
+      // i rozpoczynamy proces rekoncyliacji
+      reconcileChildren(unitOfWork, unitOfWork.props.children);
+
+      break;
+    }
+  }
+
+  // zwracamy dziecko Fibera
+  return unitOfWork.child;
 }
 
 /*
@@ -90,9 +114,12 @@ zwraca następną jednostkę pracy
 */
 function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['performUnitOfWork'], { unitOfWork });
-  // TODO
 
-  return null;
+  // rozpoczynamy pracę i wynik umieszczamy w zmiennej
+  let next = beginWork(unitOfWork);
+
+  // zwracamy następną jednostkę pracy
+  return next;
 }
 
 /*
