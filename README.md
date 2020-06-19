@@ -19,3 +19,7 @@ Zaimplementować funkcję `reconcileChildren`
 ## Kończenie pracy na Fiberze
 Zaimplementować funkcję `completeUnitOfWork`
 
+## Tworzenie wyników pracy
+Zaimplementować funkcję `commitWork`
+
+
