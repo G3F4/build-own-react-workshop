@@ -125,7 +125,16 @@ function createFiber({
   stateNode = null,
 }): Fiber {
   console.log(['createFiber'], { element, tag, parentFiber, stateNode });
-  // TODO
+
+  return {
+    tag,
+    stateNode,
+    type: element.type,
+    props: element.props,
+    return: parentFiber,
+    sibling: null,
+    child: null,
+  };
 }
 
 /*
@@ -154,7 +163,19 @@ funkcja tworząca pierwszą jednostkę pracy, która jest związana z kontenerem
 */
 function render(element: ReactElement, container: HTMLElement) {
   console.log(['render'], { element, container });
-  // TODO
+  // tworzymy Fiber związany z kontenerem aplikacji i zapisujemy referencję
+  workInProgressRoot = createFiber({
+    tag: HostRoot,
+    stateNode: container,
+    element: {
+      props: {
+        children: [element],
+      },
+    },
+  });
+  // ustawiamy stworzony Fiber jako aktualna praca do wykonania
+  // co spowoduje że pętla aplikacji rozpocznie prace
+  workInProgress = workInProgressRoot;
 }
 
 /*
