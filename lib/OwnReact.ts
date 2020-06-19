@@ -87,7 +87,26 @@ jako argument dostaje Fiber, który jest aktualnie iterowany podczas rekurencyjn
 */
 function commitWork(fiber: Fiber): void {
   console.log(['commitWork'], { fiber });
-  // TODO
+
+  // jeśli aktualny Fiber jest związany z elementem DOM
+  if (fiber.stateNode != null) {
+    // szukamy najbliższego rodzica powiązanego z rzeczywistym elementem DOM
+    let closestParentWithNode = fiber.return;
+
+    // jeśli aktualnie ustawiony rodzic nie jest związany z elementem DOM
+    while (!closestParentWithNode.stateNode) {
+      // szukamy wyżej, u dziadka(rodzic rodzica)
+      closestParentWithNode = closestParentWithNode.return;
+    }
+
+    // dodajemy element DOM do nadrzędnego elementu DOM
+    closestParentWithNode.stateNode.appendChild(fiber.stateNode);
+  }
+
+  // jeśli Fiber posiada dziecko, zagłębiamy się rekurencyjnie
+  fiber.child && commitWork(fiber.child);
+  // jeśli Fiber posiada sąsiada, zagłębiamy się rekurencyjnie
+  fiber.sibling && commitWork(fiber.sibling);
 }
 
 /*
@@ -202,12 +221,16 @@ function performSyncWorkOnRoot(): void {
       // wykonujemy pracę na aktualnie ustawionym Fiberze
       workInProgress = performUnitOfWork(workInProgress);
     }
+
+    // po wykonaniu całej pracy związanej z tworzeniem struktury Fiberów
+    // rozpoczynamy przegląd rekurencyjnie struktury w celu dodania wszystkich
+    // stworzonych elementów DOM do głównego kontenera aplikacji (<div id="root" />)
+    commitWork(workInProgressRoot.child);
   }
 
   // rejestrujemy ponowne załadowanie funkcji sprawdzającej czy jest praca do wykonania
   requestIdleCallback(performSyncWorkOnRoot);
 }
-
 // rozpoczynamy nieskończoną pętle, która sprawdza czy jest jakaś praca do wykonania
 // funkcja requestIdleCallback rejestruje do wykonania funkcję i wywołuje ją w momencie gdy przeglądarka jest bezczynna
 // docs: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback
