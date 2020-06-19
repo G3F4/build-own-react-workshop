@@ -68,9 +68,41 @@ w procesie dla wszystkich dzieci Fibera zostaną utworzone własne Fibery
 */
 function reconcileChildren(fiber: Fiber, children: unknown): void {
   console.log(['reconcileChildren'], { fiber, children });
-  // TODO
 
-  return null;
+  // jeśli argument children jest tablicą lub obiektem, możemy rozpocząć proces rekoncyliacji
+  if (Array.isArray(children) || typeof children === 'object') {
+    // zmienna pomocnicza przechowująca referencję do ostatnio utworzonego Fibera
+    let previousFiber = null;
+    // tablica dzieci, jeśli argument children nie jest tablicą, tworzymy z niego jednoelementową tablicę
+    const elements: ReactElement[] = Array.isArray(children)
+      ? children
+      : [children];
+
+    // iterujemy po wszystkich dzieciach(elementy React)
+    elements.forEach((element, index) => {
+      // dla każdego iterowanego dziecka tworzymy Fiber
+      const tag =
+        typeof element.type === 'function' ? FunctionComponent : HostComponent;
+      const newFiber = createFiber({ tag, element, parentFiber: fiber });
+
+      // jeśli aktualnie iterowany jest pierwsze dziecko
+      if (index === 0) {
+        // tworzymy w Fiberze dla którego odbywa się proces powiązanie w polu child
+        fiber.child = newFiber;
+        // jeśli iterujemy nie pierwszy element
+      } else {
+        // tworzymy powiązanie rodzeństwa w polu sibling, w ostatnio iterowanym Fiberze
+        previousFiber.sibling = newFiber;
+      }
+
+      // na koniec iteracji ustawiamy ostatnio iterowany element
+      previousFiber = newFiber;
+    });
+    // jeśli argument children nie jest tablicą ani obiektem
+  } else {
+    // uznajemy że Fiber nie jest związany z żadnym dzieckiem
+    fiber.child = null;
+  }
 }
 
 /*
