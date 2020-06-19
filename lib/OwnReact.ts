@@ -78,7 +78,40 @@ jako argument dostaje Fiber
 */
 function updateProperties(fiber: Fiber): void {
   console.log(['updateProperties'], { fiber });
-  // TODO
+
+  // funkcja pomocnicza sprawdzająca czy props jest eventem
+  const isEvent = (key) => key.startsWith('on');
+  // funkcja pomocnicza sprawdzająca czy props jest obiektem styli
+  const isStyle = (key) => key === 'style';
+  // funkcja pomocnicza sprawdzająca czy props jest zwykłym tekstem
+  const isTextContent = (prop) =>
+    typeof prop === 'string' || typeof prop === 'number';
+
+  // iterujemy po wszystkich propsach
+  Object.entries(fiber.props).forEach(([name, prop]) => {
+    // jeśli prop jest zwykłym tekstem
+    if (isTextContent(prop)) {
+      // ustawiamy atrybut textContent elementu DOM związanego z Fiberem
+      fiber.stateNode.textContent = prop as string;
+      // jeśli prop jest eventem
+    } else if (isEvent(name)) {
+      // zamieniamy wszystkie znaki nazwy eventu na małe i pomijamy prefix "on"
+      const eventType = name.toLowerCase().substring(2);
+
+      // tak przygotowaną nazwę eventu wykorzystujemy aby zacząć nasłuchiwać na event
+      fiber.stateNode.addEventListener(
+        eventType,
+        fiber.props[name] as EventListenerOrEventListenerObject,
+      );
+      // jeśli prop jest obiektem styli
+    } else if (isStyle(name)) {
+      // iterujemy do wszystkich stylach w obiekcie
+      Object.entries(prop).forEach(([cssProperty, value]) => {
+        // i modyfikujemy wartość styli elementu DOM
+        fiber.stateNode.style[cssProperty] = value;
+      });
+    }
+  });
 }
 
 /*
@@ -101,6 +134,8 @@ function commitWork(fiber: Fiber): void {
 
     // dodajemy element DOM do nadrzędnego elementu DOM
     closestParentWithNode.stateNode.appendChild(fiber.stateNode);
+    // a następnie aktualizujemy właściwości elementu DOM
+    updateProperties(fiber);
   }
 
   // jeśli Fiber posiada dziecko, zagłębiamy się rekurencyjnie

@@ -19,7 +19,8 @@ Zaimplementować funkcję `reconcileChildren`
 ## Kończenie pracy na Fiberze
 Zaimplementować funkcję `completeUnitOfWork`
 
-## Tworzenie wyników pracy
+## Dokonywanie wyników pracy
 Zaimplementować funkcję `commitWork`
 
-
+## Aktualizacja właściwości elementu DOM
+Zaimplementować funkcję `updateProperties`
