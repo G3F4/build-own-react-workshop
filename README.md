@@ -6,3 +6,6 @@ Zaimplementować funkcję `createElement`
 
 ## Tworzenie Fibera i funkcja `render`
 Zaimplementować funkcję `createFiber` oraz `render`
+
+## Pętla aplikacji
+Zaimplementować funkcję performSyncWorkOnRoot oraz wykorzystać `requestIdleCallback` do stworzenie pętli aplikacji
