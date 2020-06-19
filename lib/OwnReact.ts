@@ -28,8 +28,8 @@ interface ReactElement {
 const FunctionComponent = 0; // stała reprezentująca rodzaj Fibera z komponentem funkcyjnym
 const HostRoot = 3; // stała reprezentująca rodzaj Fibera z elementem DOM kontenera aplikacji
 const HostComponent = 5; // stała reprezentująca rodzaj Fibera z elementem DOM
-const workInProgressRoot = null; // Fiber związany z kontenerem aplikacji
-const workInProgress = null; // Fiber, który reprezentuje aktualną pracę do wykonania
+let workInProgressRoot = null; // Fiber związany z kontenerem aplikacji
+let workInProgress = null; // Fiber, który reprezentuje aktualną pracę do wykonania
 
 /*
 funkcja kończąca jednostkę pracy
@@ -119,7 +119,16 @@ function createFiber({
   stateNode = null,
 }): Fiber {
   console.log(['createFiber'], { element, tag, parentFiber, stateNode });
-  // TODO
+
+  return {
+    tag,
+    stateNode,
+    type: element.type,
+    props: element.props,
+    return: parentFiber,
+    sibling: null,
+    child: null,
+  };
 }
 
 /*
@@ -148,7 +157,19 @@ funkcja tworząca pierwszą jednostkę pracy, która jest związana z kontenerem
 */
 function render(element: ReactElement, container: HTMLElement) {
   console.log(['render'], { element, container });
-  // TODO
+  // tworzymy Fiber związany z kontenerem aplikacji i zapisujemy referencję
+  workInProgressRoot = createFiber({
+    tag: HostRoot,
+    stateNode: container,
+    element: {
+      props: {
+        children: [element],
+      },
+    },
+  });
+  // ustawiamy stworzony Fiber jako aktualna praca do wykonania
+  // co spowoduje że pętla aplikacji rozpocznie prace
+  workInProgress = workInProgressRoot;
 }
 
 /*
