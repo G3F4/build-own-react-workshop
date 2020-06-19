@@ -1,24 +1,28 @@
-type Props = Record<
-  string,
+// typ pojedynczego propa
+type Prop =
   | string
   | EventListenerOrEventListenerObject
   | Record<string, string>
-  | ReactElement
->;
+  | ReactElement;
 
+// typ obiektu reprezentującego propsy
+type Props = Record<string, Prop>;
+
+// interfejs Fibera, czyli obiektu reprezentującego jednostkę pracy
 interface Fiber {
-  tag: number;
-  stateNode: HTMLElement | null;
-  type: Function | string;
-  props: Props;
-  return: Fiber | null;
-  sibling: Fiber | null;
-  child: Fiber | null;
+  tag: number; // typ Fibera
+  stateNode: HTMLElement | null; // element DOM, z którym jest związany Fiber
+  type: Function | string; // typ elementu React, z którym jest związany Fiber
+  props: Props; // propsy Elementu React, z którym jest związany Fiber
+  return: Fiber | null; // powiązanie do Fibera, który jest rodzicem dla tego Fibera
+  sibling: Fiber | null; // powiązanie do Fibera, który jest rodzeństwem dla tego Fibera
+  child: Fiber | null; // powiązanie do Fibera, który jest bezpośrednim dzieckiem dla tego Fibera
 }
 
+// interfejs opisujący obiekt reprezentujący element React
 interface ReactElement {
-  type: Function | string;
-  props: Props;
+  type: Function | string; // typ elementu React, może to być funkcja, która jest komponentem albo string z nazwą elementu DOM
+  props: Props; // propsy elementu React
 }
 
 const FunctionComponent = 0; // stała reprezentująca rodzaj Fibera z komponentem funkcyjnym
@@ -35,6 +39,7 @@ tworzy ten element i zapisuje referencje w polu `stateNode`
 */
 function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['completeUnitOfWork'], unitOfWork);
+
   // ustawiamy aktualną jednostkę pracy
   workInProgress = unitOfWork;
 
@@ -227,13 +232,10 @@ function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
   // rozpoczynamy pracę i wynik umieszczamy w zmiennej
   let next = beginWork(unitOfWork);
 
-  console.log(['beginWork.return'], next);
-
   // jeśli nie ma więcej pracy do wykonania
   if (next === null) {
     // zakańczamy dotychczas wykonaną pracę
     next = completeUnitOfWork(unitOfWork);
-    console.log(['completeUnitOfWork.return'], next);
   }
 
   // zwracamy następną jednostkę pracy
