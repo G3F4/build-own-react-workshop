@@ -39,7 +39,37 @@ tworzy ten element i zapisuje referencje w polu `stateNode`
 */
 function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['completeUnitOfWork'], unitOfWork);
-  // TODO
+
+  // ustawiamy aktualną jednostkę pracy
+  workInProgress = unitOfWork;
+
+  // co najmniej raz wykonujemy
+  do {
+    // z aktualnej jednostki pracy wyciągamy rodzica
+    const parentFiber = workInProgress.return;
+
+    // jeśli aktualny Fiber jest związany z elementem DOM
+    if (workInProgress.tag === HostComponent) {
+      // tworzymy ten element DOM
+      workInProgress.stateNode = document.createElement(workInProgress.type);
+    }
+
+    // powiązanie do rodzeństwa
+    const siblingFiber = workInProgress.sibling;
+
+    // jeśli posiada rodzeństwa
+    if (siblingFiber !== null) {
+      // zwróć rodzeństwo
+      return siblingFiber;
+    }
+
+    // jeśli doszliśmy do końca pętli, ustawiamy Fiber reprezentujący rodzica jako aktualna jednostka pracy
+    workInProgress = parentFiber;
+    // tak długo aż rodzic będzie nullem, czyli aż gdy dotrzemy do Fibera bez rodzica czyli Fibera powiązanego z kontenerem aplikacji
+  } while (workInProgress !== null);
+
+  // jeśli Fiber nie posiadał więcej niż jedno dziecko, zwracamy null aby przerwać proces
+  return null;
 }
 
 /*
@@ -147,6 +177,12 @@ function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
 
   // rozpoczynamy pracę i wynik umieszczamy w zmiennej
   let next = beginWork(unitOfWork);
+
+  // jeśli nie ma więcej pracy do wykonania
+  if (next === null) {
+    // zakańczamy dotychczas wykonaną pracę
+    next = completeUnitOfWork(unitOfWork);
+  }
 
   // zwracamy następną jednostkę pracy
   return next;

@@ -15,3 +15,7 @@ Zaimplementować funkcję `beginWork`
 
 ## Rekoncyliacja (Reconciliation)
 Zaimplementować funkcję `reconcileChildren`
+
+## Kończenie pracy na Fiberze
+Zaimplementować funkcję `completeUnitOfWork`
+
