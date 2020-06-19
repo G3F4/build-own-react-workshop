@@ -100,14 +100,25 @@ funkcja rozpoczyna pracę na root'cie, czyli Fiberem związanych z kontenerem ap
 efektem końcowym jest wyrenderowana aplikacja (DOM)
 */
 function performSyncWorkOnRoot(): void {
-  console.log(['performSyncWorkOnRoot']);
-  // TODO
+  workInProgress && console.log(['performSyncWorkOnRoot']);
+
+  // jeśli jest jakaś praca do wykonania
+  if (workInProgress !== null) {
+    // tak długo jak jest praca do wykonania
+    while (workInProgress !== null) {
+      // wykonujemy pracę na aktualnie ustawionym Fiberze
+      workInProgress = performUnitOfWork(workInProgress);
+    }
+  }
+
+  // rejestrujemy ponowne załadowanie funkcji sprawdzającej czy jest praca do wykonania
+  requestIdleCallback(performSyncWorkOnRoot);
 }
 
 // rozpoczynamy nieskończoną pętle, która sprawdza czy jest jakaś praca do wykonania
 // funkcja requestIdleCallback rejestruje do wykonania funkcję i wywołuje ją w momencie gdy przeglądarka jest bezczynna
 // docs: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback
-// TODO
+requestIdleCallback(performSyncWorkOnRoot);
 
 /*
 funkcja tworząca nowy Fiber
