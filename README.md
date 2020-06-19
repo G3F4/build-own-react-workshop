@@ -12,3 +12,6 @@ Zaimplementować funkcję performSyncWorkOnRoot oraz wykorzystać `requestIdleCa
 
 ## Rozpoczęcie pracy na Fiberze
 Zaimplementować funkcję `beginWork`
+
+## Rekoncyliacja (Reconciliation)
+Zaimplementować funkcję `reconcileChildren`
