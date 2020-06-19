@@ -39,36 +39,8 @@ tworzy ten element i zapisuje referencje w polu `stateNode`
 */
 function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['completeUnitOfWork'], unitOfWork);
+  // TODO
 
-  // ustawiamy aktualną jednostkę pracy
-  workInProgress = unitOfWork;
-
-  // co najmniej raz wykonujemy
-  do {
-    // z aktualnej jednostki pracy wyciągamy rodzica
-    const parentFiber = workInProgress.return;
-
-    // jeśli aktualny Fiber jest związany z elementem DOM
-    if (workInProgress.tag === HostComponent) {
-      // tworzymy ten element DOM
-      workInProgress.stateNode = document.createElement(workInProgress.type);
-    }
-
-    // powiązanie do rodzeństwa
-    const siblingFiber = workInProgress.sibling;
-
-    // jeśli posiada rodzeństwa
-    if (siblingFiber !== null) {
-      // zwróć rodzeństwo
-      return siblingFiber;
-    }
-
-    // jeśli doszliśmy do końca pętli, ustawiamy Fiber reprezentujący rodzica jako aktualna jednostka pracy
-    workInProgress = parentFiber;
-    // tak długo aż rodzic będzie nullem, czyli aż gdy dotrzemy do Fibera bez rodzica czyli Fibera powiązanego z kontenerem aplikacji
-  } while (workInProgress !== null);
-
-  // jeśli Fiber nie posiadał więcej niż jedno dziecko, zwracamy null aby przerwać proces
   return null;
 }
 
@@ -78,40 +50,7 @@ jako argument dostaje Fiber
 */
 function updateProperties(fiber: Fiber): void {
   console.log(['updateProperties'], { fiber });
-
-  // funkcja pomocnicza sprawdzająca czy props jest eventem
-  const isEvent = (key) => key.startsWith('on');
-  // funkcja pomocnicza sprawdzająca czy props jest obiektem styli
-  const isStyle = (key) => key === 'style';
-  // funkcja pomocnicza sprawdzająca czy props jest zwykłym tekstem
-  const isTextContent = (prop) =>
-    typeof prop === 'string' || typeof prop === 'number';
-
-  // iterujemy po wszystkich propsach
-  Object.entries(fiber.props).forEach(([name, prop]) => {
-    // jeśli prop jest zwykłym tekstem
-    if (isTextContent(prop)) {
-      // ustawiamy atrybut textContent elementu DOM związanego z Fiberem
-      fiber.stateNode.textContent = prop as string;
-      // jeśli prop jest eventem
-    } else if (isEvent(name)) {
-      // zamieniamy wszystkie znaki nazwy eventu na małe i pomijamy prefix "on"
-      const eventType = name.toLowerCase().substring(2);
-
-      // tak przygotowaną nazwę eventu wykorzystujemy aby zacząć nasłuchiwać na event
-      fiber.stateNode.addEventListener(
-        eventType,
-        fiber.props[name] as EventListenerOrEventListenerObject,
-      );
-      // jeśli prop jest obiektem styli
-    } else if (isStyle(name)) {
-      // iterujemy do wszystkich stylach w obiekcie
-      Object.entries(prop).forEach(([cssProperty, value]) => {
-        // i modyfikujemy wartość styli elementu DOM
-        fiber.stateNode.style[cssProperty] = value;
-      });
-    }
-  });
+  // TODO
 }
 
 /*
@@ -120,28 +59,7 @@ jako argument dostaje Fiber, który jest aktualnie iterowany podczas rekurencyjn
 */
 function commitWork(fiber: Fiber): void {
   console.log(['commitWork'], { fiber });
-
-  // jeśli aktualny Fiber jest związany z elementem DOM
-  if (fiber.stateNode != null) {
-    // szukamy najbliższego rodzica powiązanego z rzeczywistym elementem DOM
-    let closestParentWithNode = fiber.return;
-
-    // jeśli aktualnie ustawiony rodzic nie jest związany z elementem DOM
-    while (!closestParentWithNode.stateNode) {
-      // szukamy wyżej, u dziadka(rodzic rodzica)
-      closestParentWithNode = closestParentWithNode.return;
-    }
-
-    // dodajemy element DOM do nadrzędnego elementu DOM
-    closestParentWithNode.stateNode.appendChild(fiber.stateNode);
-    // a następnie aktualizujemy właściwości elementu DOM
-    updateProperties(fiber);
-  }
-
-  // jeśli Fiber posiada dziecko, zagłębiamy się rekurencyjnie
-  fiber.child && commitWork(fiber.child);
-  // jeśli Fiber posiada sąsiada, zagłębiamy się rekurencyjnie
-  fiber.sibling && commitWork(fiber.sibling);
+  // TODO
 }
 
 /*
@@ -150,41 +68,7 @@ w procesie dla wszystkich dzieci Fibera zostaną utworzone własne Fibery
 */
 function reconcileChildren(fiber: Fiber, children: unknown): void {
   console.log(['reconcileChildren'], { fiber, children });
-
-  // jeśli argument children jest tablicą lub obiektem, możemy rozpocząć proces rekoncyliacji
-  if (Array.isArray(children) || typeof children === 'object') {
-    // zmienna pomocnicza przechowująca referencję do ostatnio utworzonego Fibera
-    let previousFiber = null;
-    // tablica dzieci, jeśli argument children nie jest tablicą, tworzymy z niego jednoelementową tablicę
-    const elements: ReactElement[] = Array.isArray(children)
-      ? children
-      : [children];
-
-    // iterujemy po wszystkich dzieciach(elementy React)
-    elements.forEach((element, index) => {
-      // dla każdego iterowanego dziecka tworzymy Fiber
-      const tag =
-        typeof element.type === 'function' ? FunctionComponent : HostComponent;
-      const newFiber = createFiber({ tag, element, parentFiber: fiber });
-
-      // jeśli aktualnie iterowany jest pierwsze dziecko
-      if (index === 0) {
-        // tworzymy w Fiberze dla którego odbywa się proces powiązanie w polu child
-        fiber.child = newFiber;
-        // jeśli iterujemy nie pierwszy element
-      } else {
-        // tworzymy powiązanie rodzeństwa w polu sibling, w ostatnio iterowanym Fiberze
-        previousFiber.sibling = newFiber;
-      }
-
-      // na koniec iteracji ustawiamy ostatnio iterowany element
-      previousFiber = newFiber;
-    });
-    // jeśli argument children nie jest tablicą ani obiektem
-  } else {
-    // uznajemy że Fiber nie jest związany z żadnym dzieckiem
-    fiber.child = null;
-  }
+  // TODO
 }
 
 /*
@@ -194,31 +78,9 @@ zwraca dziecko Fibera po wykonaniu procesu rekoncyliacji(org. reconciliation)
 */
 function beginWork(unitOfWork: Fiber): Fiber | null {
   console.log(['beginWork'], { unitOfWork });
+  // TODO
 
-  // w zależności od taga Fibera
-  switch (unitOfWork.tag) {
-    // dla Fibera, który reprezentuje komponentem funkcyjny
-    case FunctionComponent: {
-      // wywołujemy typ Fibera, który jest funkcją zwracającą tablicę elementów
-      // i rozpoczynamy proces rekoncyliacji
-      if (typeof unitOfWork.type === 'function') {
-        reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
-      }
-
-      break;
-    }
-    // dla Fibera związanego z głównym elementem DOM oraz zwykłym elementem DOM
-    case HostRoot:
-    case HostComponent: {
-      // i rozpoczynamy proces rekoncyliacji
-      reconcileChildren(unitOfWork, unitOfWork.props.children);
-
-      break;
-    }
-  }
-
-  // zwracamy dziecko Fibera
-  return unitOfWork.child;
+  return null;
 }
 
 /*
@@ -228,18 +90,9 @@ zwraca następną jednostkę pracy
 */
 function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['performUnitOfWork'], { unitOfWork });
+  // TODO
 
-  // rozpoczynamy pracę i wynik umieszczamy w zmiennej
-  let next = beginWork(unitOfWork);
-
-  // jeśli nie ma więcej pracy do wykonania
-  if (next === null) {
-    // zakańczamy dotychczas wykonaną pracę
-    next = completeUnitOfWork(unitOfWork);
-  }
-
-  // zwracamy następną jednostkę pracy
-  return next;
+  return null;
 }
 
 /*
@@ -247,30 +100,14 @@ funkcja rozpoczyna pracę na root'cie, czyli Fiberem związanych z kontenerem ap
 efektem końcowym jest wyrenderowana aplikacja (DOM)
 */
 function performSyncWorkOnRoot(): void {
-  workInProgress && console.log(['performSyncWorkOnRoot']);
-
-  // jeśli jest jakaś praca do wykonania
-  if (workInProgress !== null) {
-    // tak długo jak jest praca do wykonania
-    while (workInProgress !== null) {
-      // wykonujemy pracę na aktualnie ustawionym Fiberze
-      workInProgress = performUnitOfWork(workInProgress);
-    }
-
-    // po wykonaniu całej pracy związanej z tworzeniem struktury Fiberów
-    // rozpoczynamy przegląd rekurencyjnie struktury w celu dodania wszystkich
-    // stworzonych elementów DOM do głównego kontenera aplikacji (<div id="root" />)
-    commitWork(workInProgressRoot.child);
-  }
-
-  // rejestrujemy ponowne załadowanie funkcji sprawdzającej czy jest praca do wykonania
-  requestIdleCallback(performSyncWorkOnRoot);
+  console.log(['performSyncWorkOnRoot']);
+  // TODO
 }
 
 // rozpoczynamy nieskończoną pętle, która sprawdza czy jest jakaś praca do wykonania
 // funkcja requestIdleCallback rejestruje do wykonania funkcję i wywołuje ją w momencie gdy przeglądarka jest bezczynna
 // docs: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback
-requestIdleCallback(performSyncWorkOnRoot);
+// TODO
 
 /*
 funkcja tworząca nowy Fiber
@@ -288,16 +125,7 @@ function createFiber({
   stateNode = null,
 }): Fiber {
   console.log(['createFiber'], { element, tag, parentFiber, stateNode });
-
-  return {
-    tag,
-    stateNode,
-    type: element.type,
-    props: element.props,
-    return: parentFiber,
-    sibling: null,
-    child: null,
-  };
+  // TODO
 }
 
 /*
@@ -311,14 +139,7 @@ zwraca element React, który składa się z propsów oraz typu elementu
 */
 function createElement(type, props, ...children): ReactElement {
   console.log(['createElement'], { type, props, children });
-
-  return {
-    type,
-    props: {
-      ...(props || {}), // jeśli element nie posiada żadnych propsów wykorzystywany transpiler @babel/plugin-transform-react-jsx przekazuje nulla jako drugi argument
-      children: children.length === 1 ? children[0] : children, // zawsze chcemy traktować children jako tablice, jeśli mamy tylko jedno dziecko, tworzymy z niego jednoelementową tablicę
-    },
-  };
+  // TODO
 }
 
 /*
@@ -326,19 +147,7 @@ funkcja tworząca pierwszą jednostkę pracy, która jest związana z kontenerem
 */
 function render(element: ReactElement, container: HTMLElement) {
   console.log(['render'], { element, container });
-  // tworzymy Fiber związany z kontenerem aplikacji i zapisujemy referencję
-  workInProgressRoot = createFiber({
-    tag: HostRoot,
-    stateNode: container,
-    element: {
-      props: {
-        children: [element],
-      },
-    },
-  });
-  // ustawiamy stworzony Fiber jako aktualna praca do wykonania
-  // co spowoduje że pętla aplikacji rozpocznie prace
-  workInProgress = workInProgressRoot;
+  // TODO
 }
 
 /*
