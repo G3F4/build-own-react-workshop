@@ -9,3 +9,6 @@ Zaimplementować funkcję `createFiber` oraz `render`
 
 ## Pętla aplikacji
 Zaimplementować funkcję performSyncWorkOnRoot oraz wykorzystać `requestIdleCallback` do stworzenie pętli aplikacji
+
+## Rozpoczęcie pracy na Fiberze
+Zaimplementować funkcję `beginWork`
