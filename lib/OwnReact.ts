@@ -133,7 +133,14 @@ zwraca element React, który składa się z propsów oraz typu elementu
 */
 function createElement(type, props, ...children): ReactElement {
   console.log(['createElement'], { type, props, children });
-  // TODO
+
+  return {
+    type,
+    props: {
+      ...(props || {}), // jeśli element nie posiada żadnych propsów wykorzystywany transpiler @babel/plugin-transform-react-jsx przekazuje nulla jako drugi argument
+      children: children.length === 1 ? children[0] : children, // zawsze chcemy traktować children jako tablice, jeśli mamy tylko jedno dziecko, tworzymy z niego jednoelementową tablicę
+    },
+  };
 }
 
 /*
