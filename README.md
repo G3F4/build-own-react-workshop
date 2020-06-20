@@ -1,5 +1,5 @@
 # warsawjs-workshop-45-own-react
-Workshop for purpose of WarsawJS Workshop 45 - build Your own React
+WarsawJS Workshop 45 - Własny React
 
 ## Cel warsztatu
 Zbudowanie narzędzia do renderowania aplikacji, na podstawie biblioteki React.
@@ -8,6 +8,19 @@ Pozwoli to zrozumieć działanie oryginalnej biblioteki oraz jak tworzą oprogra
 
 ## Przygotowanie
 Po sklonowaniu repozytorium zmienić branch na `workshop` lub `workshop-js` (jeśli preferujesz środowisko bez typów) oraz zainstalować zależności wykorzystując `yarn` lub `npm`.
+
+## Materiały
+
+### Wizualizacja procesu pracy na strukturze Fiberów
+![Wizualizacja procesu pracy na strukturze Fiberów](https://admin.indepth.dev/content/images/2019/08/tmp2.gif)
+[źródło](https://indepth.dev/inside-fiber-in-depth-overview-of-the-new-reconciliation-algorithm-in-react/)
+
+### Świetny artykuł na temat budowy własnego React
+Z tego artykułu zapożyczony został sposób wykonania pętli i częściowo rekoncyliacji.
+[Build your own React - Rodrigo Pombo](https://pomb.us/build-your-own-react/)
+
+### Kolejny ciekawy artykuł DIY React
+[Build your own React in 90 lines of JavaScript](https://dev.to/ameerthehacker/build-your-own-react-in-90-lines-of-javascript-1je2)
 
 ## Tworzenie elementu React
 Rozpoczniemy od zamiany JSX na wywołania React.
