@@ -45,26 +45,20 @@ function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
 
   // co najmniej raz wykonujemy
   do {
-    // z aktualnej jednostki pracy wyciągamy rodzica
-    const parentFiber = workInProgress.return;
-
     // jeśli aktualny Fiber jest związany z elementem DOM
     if (workInProgress.tag === HostComponent) {
       // tworzymy ten element DOM
       workInProgress.stateNode = document.createElement(workInProgress.type);
     }
 
-    // powiązanie do rodzeństwa
-    const siblingFiber = workInProgress.sibling;
-
     // jeśli posiada rodzeństwa
-    if (siblingFiber !== null) {
+    if (workInProgress.sibling !== null) {
       // zwróć rodzeństwo
-      return siblingFiber;
+      return workInProgress.sibling;
     }
 
     // jeśli doszliśmy do końca pętli, ustawiamy Fiber reprezentujący rodzica jako aktualna jednostka pracy
-    workInProgress = parentFiber;
+    workInProgress = workInProgress.return;
     // tak długo aż rodzic będzie nullem, czyli aż gdy dotrzemy do Fibera bez rodzica czyli Fibera powiązanego z kontenerem aplikacji
   } while (workInProgress !== null);
 
