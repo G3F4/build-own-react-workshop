@@ -8,6 +8,11 @@ Pozwoli to zrozumieć działanie oryginalnej biblioteki oraz jak tworzą oprogra
 
 ## Przygotowanie
 Po sklonowaniu repozytorium zmienić branch na `workshop` lub `workshop-js` (jeśli preferujesz środowisko bez typów) oraz zainstalować zależności wykorzystując `yarn` lub `npm`.
+Aby rozpocząć pracę, należy skorzystać ze skryptu `dev` (`yarn dev` lub `npm run dev`).
+Wszystkie funkcje, które będę potrzebne do pracy, zostały napisane w postaci pustej funkcji z argumentami.
+Podczas warsztatu kolejno będziemy implementować wszystkie funkcje, aż do uzyskania kodu, który potraci wyrenderować JSX w postaci drzewa DOM.
+Do pracy została przygotowana prosta aplikacja. Jej kodu nie modyfikujemy.
+Wszystkie funkcje do implementacji znajdują się w pliku `lib/OwnReact.[ts/js]`.
 
 ## Materiały
 
