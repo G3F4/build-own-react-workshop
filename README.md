@@ -7,7 +7,7 @@ Podczas pracy zachowywać będziemy rzeczywistą architekturę i nazewnictwo.
 Pozwoli to zrozumieć działanie oryginalnej biblioteki oraz jak tworzą oprogramowanie aktualnie największe firmy.
 
 ## Przygotowanie
-Po sklonowaniu repozytorium zmienić branch na `workshop` oraz zainstalować zależności wykorzystując `yarn` lub `npm`.
+Po sklonowaniu repozytorium zmienić branch na `workshop` lub `workshop-js` (jeśli preferujesz środowisko bez typów) oraz zainstalować zależności wykorzystując `yarn` lub `npm`.
 
 ## Tworzenie elementu React
 Rozpoczniemy od zamiany JSX na wywołania React.
