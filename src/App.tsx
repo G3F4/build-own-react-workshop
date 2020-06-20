@@ -13,8 +13,10 @@ function GrowingCounter() {
 
   return (
     <div>
-      <span style={{ fontSize: `${30 + count}px` }}>{count.toString()}</span>
       <button onClick={increase}>increase counter</button>
+      <span style={{ fontSize: `${30 + count}px`, margin: `10px` }}>
+        {count.toString()}
+      </span>
       <button onClick={decrease}>decrease counter</button>
     </div>
   );
