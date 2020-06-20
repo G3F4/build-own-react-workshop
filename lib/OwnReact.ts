@@ -50,8 +50,6 @@ function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
 }
 
 function updateProperties(fiber: Fiber): void {
-  console.log(['updateProperties'], { fiber });
-
   const isEvent = (key) => key.startsWith('on');
   const isStyle = (key) => key === 'style';
   const isTextContent = (prop) =>
@@ -92,8 +90,6 @@ function commitWork(fiber: Fiber): void {
 }
 
 function reconcileChildren(fiber: Fiber, children: unknown): void {
-  console.log(['reconcileChildren'], { fiber, children });
-
   if (Array.isArray(children) || typeof children === 'object') {
     let previousFiber = null;
     const elements: ReactElement[] = Array.isArray(children)
@@ -139,8 +135,6 @@ function beginWork(unitOfWork: Fiber): Fiber | null {
 }
 
 function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
-  console.log(['performUnitOfWork'], { unitOfWork });
-
   let next = beginWork(unitOfWork);
 
   if (next === null) {
@@ -151,8 +145,6 @@ function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
 }
 
 function performSyncWorkOnRoot(): void {
-  workInProgress && console.log(['performSyncWorkOnRoot']);
-
   if (workInProgress !== null) {
     while (workInProgress !== null) {
       workInProgress = performUnitOfWork(workInProgress);
@@ -172,8 +164,6 @@ function createFiber({
   parentFiber = null,
   stateNode = null,
 }): Fiber {
-  console.log(['createFiber'], { element, tag, parentFiber, stateNode });
-
   return {
     tag,
     stateNode,
@@ -186,8 +176,6 @@ function createFiber({
 }
 
 function createElement(type, props, ...children): ReactElement {
-  console.log(['createElement'], { type, props, children });
-
   return {
     type,
     props: {
