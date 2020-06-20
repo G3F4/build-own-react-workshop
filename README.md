@@ -30,21 +30,15 @@ React.createElement(
 )
 ```
 
-Funkcja `React.createElement` zwraca element React. Jest to struktura danych opisująca element aplikacji. 
-Każdy element React składa się z 2 podstawowych pól:
+Funkcja `React.createElement` jako argumenty dostaje:
 * type — typ elementu React. Może to być nazwa elementu DOM albo funkcja komponentu.
 * props - propsy elementu React użyte do renderowania
 * pozostałe kolejne argumenty — dzieci elementu React
 
-
-
-### Zadanie
-Zaimplementować funkcję `createElement`.
-Jako wynik zwraca element React. Wszystkie dzieci elementu należy zamienić na tablicę i stworzyć propsa `children`.
-
-### Efekt
-W konsoli widzimy, że funkcja `render` dostała w argumencie poprawny element React reprezentujący wejście do aplikacji (`<App /> w pliku src/index.tsx`)
-
+Zwraca element React. Jest to struktura danych opisująca element aplikacji. 
+Każdy element React składa się z 2 podstawowych pól:
+* type — typ elementu React. Może to być nazwa elementu DOM albo funkcja komponentu.
+* props - propsy elementu
 ```typescript
 interface ReactElement {
   type: Function | string; // typ elementu React, może to być funkcja, która jest komponentem albo string z nazwą elementu DOM
@@ -52,15 +46,28 @@ interface ReactElement {
 }
 ```
 
+### Zadanie
+Zaimplementować funkcję `createElement`.
+Jako wynik zwraca element React. Wszystkie dzieci elementu należy zamienić na tablicę i stworzyć propsa `children` i zmergować z propsami przekazanymi jako drugi argument funkcji.
+
+### Efekt
+W konsoli widzimy, że funkcja `render` dostała w argumencie poprawny element React reprezentujący wejście do aplikacji (`<App /> w pliku src/index.tsx`)
+
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/5557b63698e34314f119d7b38674797667dc35c2)
 
 ## Tworzenie Fibera i funkcja `render`
-Do abstrakcji pracy do wykonania React wykorzystuje tak zwany Fiber. Jest to struktura opisująca pracę do wykonania na danym elemencie React.
+Do abstrakcji pracy do wykonania React wykorzystuje tak zwany Fiber. 
+Jest to struktura opisująca pracę do wykonania na danym elemencie React.
+Fiber posiada rodzaj, typ i propsy elementu React, z którym jest związany.
 Każdy Fiber może posiadać powiązanie do innych Fiberów:
 * rodzica
 * dziecka
 * rodzeństwo
-Dzięki temu powstaje powiązana lista elementów, po której można wydajnie iterować. W naszej implementacji React będziemy mieć 3 rodzaje Fiberów:
+
+Każdy Fiber posiada co najmniej jedno powiązanie.
+Dzięki temu powstaje powiązana lista elementów, po której można wydajnie iterować. 
+
+W naszej implementacji React będziemy mieć 3 rodzaje Fiberów:
 * związanego z kontenerem aplikacji (`<div id="root" />`)
 * związanego ze zwykłym elementem DOM (`div`, `span`, etc.)
 * związanego z komponentem funkcyjnym (`App`)
@@ -80,27 +87,27 @@ interface Fiber {
 ### Zadanie
 Zaimplementować funkcję `createFiber` oraz `render`.
 
-Funkcja `createFiber`, dostaje na wejściu obiekt z polami:
-* `element` - element, dla którego tworzony jest Fiber
-* `tag` - rodzaj Fibera (`FunctionComponent` lub `HostRoot` lub `HostComponent`)
-* `parentFiber` - Fiber rodzica
-* `stateNode` - element DOM związany z Fiberem
-Na wyjściu powinna zwrócić obiekt zgodny z interfejsem.
-Pola `sibling` oraz `child` inicjalne mają wartość `null`.
-
-Funkcja `render` dostaje dwa argumenty:
-* `element` - element React wykorzystany jako wejście do aplikacji
-* `container` - element DOM wykorzystany jako kontener aplikacji
-
-Funkcja tworzy Fiber związany z kontenerem aplikacji, a następnie ustawia referencję: 
-* `workInProgressRoot` - reprezentująca Fiber związany z kontenerem aplikacji
-* `workInProgress` - reprezentująca aktualny Fiber
-
-Fiber związany z kontenerem aplikacji: 
-* `tag` - flaga `HostRoot`
-* `stateNode` - referencja do kontenera aplikacji
-* `element` - element React bez typu, który posiada jednego propsa: `children`, który jest jednoelementową tablicą z elementem React, przekazanym w argumencie funkcji `render`.
-
+### Kroki
+* Zaimplementować funkcję `createFiber`
+    * dostaje na wejściu obiekt z polami:
+        * `element` - element, dla którego tworzony jest Fiber
+        * `tag` - rodzaj Fibera (`FunctionComponent` lub `HostRoot` lub `HostComponent`)
+        * `parentFiber` - Fiber rodzica
+        * `stateNode` - element DOM związany z Fiberem
+    * powinna zwrócić obiekt zgodny z interfejsem.
+    * pola `sibling` oraz `child` inicjalne mają wartość `null`.
+    * resztę pól zainicjować odpowiednio, wykorzystując argument funkcji.
+* Dodać implementację funkcji `render`
+    * dostaje dwa argumenty:
+        * `element` - element React wykorzystany jako wejście do aplikacji
+        * `container` - element DOM wykorzystany jako kontener aplikacji
+    * wewnątrz funkcji stworzyć Fiber związany z kontenerem aplikacji, a następnie ustawić go jako referencję do: 
+        * `workInProgressRoot` - reprezentująca Fiber związany z kontenerem aplikacji
+        * `workInProgress` - reprezentująca aktualny Fiber
+    * do stworzenia Fibera wykorzystać
+        * `tag` - flaga `HostRoot`
+        * `stateNode` - referencja do kontenera aplikacji
+        * `element` - element React bez typu, który posiada jednego propsa: `children`, który jest jednoelementową tablicą z elementem React, przekazanym w argumencie funkcji `render`.
 
 ### Efekt
 Funkcja `render` po wywołaniu tworzy pierwszy Fiber, reprezentujący początek pracy do wykonania i zapisuje referencję reprezentujące Fiber związany z kontenerem aplikacji oraz aktualną jednostkę pracy do wykonania.
@@ -127,7 +134,7 @@ Zaimplementować funkcję `performSyncWorkOnRoot` oraz wykorzystać `requestIdle
             * wynik zapisujemy do `workInProgress`
             
 ### Efekt
-W konsoli widzimy że wykonała się funkcja `performUnitOfWork`, po czym nieskończona pętla się zatrzymała, ponieważ `performUnitOfWork` na razie zwraca `null`.
+W konsoli widzimy, że wykonała się funkcja `performUnitOfWork`, po czym nieskończona pętla się zatrzymała, ponieważ `performUnitOfWork` na razie zwraca `null`.
 
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/b3eda4c2a784816ff55aa782291a17e530e6ed6b)
 
@@ -135,7 +142,7 @@ W konsoli widzimy że wykonała się funkcja `performUnitOfWork`, po czym niesko
 Teraz zajmiemy się rozpoczęciem wykonania pracy.
 Funkcja `beginWork` jest odpowiedzialna za przygotowanie Fibera do procesu rekoncyliacji.
 Dla komponentów niefunkcyjnych wystarczy po prostu przekazać do funkcji `reconcileChildren` dzieci, czyli props `children` Fibera.
-Jednak dla komponentów funkcyjnych należy wywołać odpowiednio ten komponent, any uzyskać jego dzieci.
+Jednak dla komponentów funkcyjnych należy wywołać odpowiednio ten komponent, aby uzyskać jego dzieci.
 Na koniec funkcja powinna zwrócić wartość pola `child`.
 W procesie rekoncyliacji, jeśli Fiber posiada jakieś dzieci, wartość pola `child` zostanie zainicjowana.
 Tym zajmiemy się w kolejnym zadaniu.
@@ -158,6 +165,9 @@ Zaimplementować funkcję `beginWork` i rozpocząć wykonywanie pracy w funkcji 
                 * do funkcji komponentu przekazujemy propsy znajdujące się w polu `props` Fibera przekazanego do funkcji `beginWork`
             * dla komponentów związanych z kontenerem aplikacji lub elementem DOM (`HostRoot` lub `HostComponent`)
     * na koniec zwracamy dziecko, które znajduje się w polu `child` Fibera przekazanego do funkcji `beginWork`
+
+#### Efekt
+Brak różnic z poprzednim etapem. W konsoli widzimy tylko, że wywołana została funkcja `reconcileChildren`.
 
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/730ebdba2ee17803e63ab8edc3af20c3d67ee103)
 
@@ -194,7 +204,9 @@ Zaimplementować funkcję `reconcileChildren`
                 * dla pierwszego iterowanego elementu zapisujemy referencję do nowego Fibera w polu `child` Fibera dostępnego w domknięciu funkcji
                 * dla każdego kolejnego iterowanego elementu zapisujemy referencję do nowego Fibera w polu `sibling` poprzednio iterowanego Fibera
             * na koniec zapisujemy referencję do stworzonego Fibera w zmiennej przechowującej referencję do ostatnio stworzonego Fibera.
-            
+
+#### Efekt
+Utworzone zostają Fibery dla wszystkich elementów z odpowiednim powiązaniem.
 
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/a9a42134ee8ae1015e13d313e5f4c202dc188395)
 
@@ -218,6 +230,9 @@ Zaimplementować funkcję `completeUnitOfWork` i wykorzystać w funkcji `perform
         * następnie sprawdzamy, czy aktualnie ustawiona jednostka pracy `workInProgress` posiada jakieś rodzeństwo (pole `sibling`).
             * jeśli posiada — przerywamy pętlę i zwracamy rodzeństwo, które stanie się następną aktualną jednostką pracy.
             
+#### Efekt
+Odpowiednie Fibery posiadają zapisaną referencję do stworzonych elementów DOM.
+
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/1db1fc6fb7af22d171f0a50e631aea691071653c)
 
 ## Dokonywanie wyników pracy
