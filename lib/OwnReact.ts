@@ -226,9 +226,9 @@ function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
   // rozpoczynamy pracę i wynik umieszczamy w zmiennej
   let next = beginWork(unitOfWork);
 
-  // jeśli nie ma więcej pracy do wykonania
+  // funkcja beginWork zwraca null gdy dobrze do końcowego elementu, czyli takiego który nie posiada żadnych dzieci i nie jest komponentem funkcyjnym
   if (next === null) {
-    // zakańczamy dotychczas wykonaną pracę
+    // wtedy rozpoczynamy proces zakańczania pracy, czyli tworzenia elementów DOM
     next = completeUnitOfWork(unitOfWork);
   }
 
