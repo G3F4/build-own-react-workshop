@@ -1,5 +1,5 @@
-# warsawjs-workshop-45-own-react
-WarsawJS Workshop 45 - Własny React
+# build-own-react-workshop
+Build Own React workshop
 
 ## Cel warsztatu
 Zbudowanie narzędzia do renderowania aplikacji, na podstawie biblioteki React.
