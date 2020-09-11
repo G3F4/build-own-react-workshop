@@ -8,13 +8,15 @@ type Props = Record<string, Prop>;
 const Placement = 2;
 const Update = 4;
 const Deletion = 8;
+type EffectTag = typeof Placement | typeof Update | typeof Deletion;
+type Tag =
+  | typeof FunctionComponent
+  | typeof HostRoot
+  | typeof HostComponent
+  | typeof IndeterminateComponent;
 
 interface Fiber {
-  tag:
-    | typeof FunctionComponent
-    | typeof HostRoot
-    | typeof HostComponent
-    | typeof IndeterminateComponent; // typ Fibera
+  tag: Tag; // typ Fibera
   stateNode: HTMLElement | null; // element DOM, z którym jest związany Fiber
   type: Function | string; // typ elementu React, z którym jest związany Fiber
   pendingProps: Props; // propsy Elementu React, z którym jest związany Fiber
@@ -22,12 +24,31 @@ interface Fiber {
   sibling: Fiber | null; // powiązanie do Fibera, który jest rodzeństwem dla tego Fibera
   child: Fiber | null; // powiązanie do Fibera, który jest bezpośrednim dzieckiem dla tego Fibera
   alternate: Fiber | null; // powiązanie do Fibera, który reprezentuje wyrenderowany Fiber
-  effectTag: typeof Placement | typeof Update; // rodzaj pracy do wykonania na Fiberze
+  effectTag: EffectTag; // rodzaj pracy do wykonania na Fiberze
   memoizedState: any; // powiązana lista hooków
 }
 
-let currentHook = null;
-let workInProgressHook = null;
+interface Hook {
+  memoizedState: unknown;
+  baseState: unknown;
+  baseQueue: HookQueue;
+  queue: any;
+  next: any;
+}
+
+interface HookQueue {
+  next: HookUpdate;
+  pending: any;
+  dispatch: Function;
+}
+
+interface HookUpdate {
+  action: Function;
+  next: HookUpdate;
+}
+
+let currentHook: Hook | null = null;
+let workInProgressHook: Hook | null = null;
 
 interface ReactElement {
   type: Function | string;
@@ -38,12 +59,27 @@ const FunctionComponent = 0;
 const HostRoot = 3;
 const HostComponent = 5;
 const IndeterminateComponent = 2;
-let finishedRootFiber = null;
-let currentRootFiber = null;
-let currentFiber = null;
-let currentDispatcher = null;
-let dispatcherOnMount = null;
-let dispatcherOnUpdate = null;
+let finishedRootFiber: Fiber = null;
+let currentRootFiber: Fiber = null;
+let currentFiber: Fiber = null;
+let currentDispatcher:
+  | typeof dispatcherOnMount
+  | typeof dispatcherOnUpdate
+  | null = null;
+const dispatcherOnMount = {
+  useState: function <T>(initialState: T) {
+    console.log(['dispatcherOnMount.useState'], { initialState });
+
+    return mountState(initialState);
+  },
+};
+const dispatcherOnUpdate = {
+  useState: function <T>(initialState: T) {
+    console.log(['dispatcherOnUpdate.useState'], { initialState });
+
+    return updateState();
+  },
+};
 
 function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
   console.log(['completeUnitOfWork'], unitOfWork);
@@ -52,7 +88,9 @@ function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
 
   do {
     if (currentFiber.tag === HostComponent && currentFiber.stateNode === null) {
-      currentFiber.stateNode = document.createElement(currentFiber.type);
+      currentFiber.stateNode = document.createElement(
+        currentFiber.type as string,
+      );
     }
 
     if (currentFiber.sibling !== null) {
@@ -68,9 +106,9 @@ function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
 function updateProperties(fiber: Fiber): void {
   console.log(['updateProperties'], { fiber });
 
-  const isEvent = (key) => key.startsWith('on');
-  const isStyle = (key) => key === 'style';
-  const isTextContent = (prop) =>
+  const isEvent = (key: string) => key.startsWith('on');
+  const isStyle = (key: string) => key === 'style';
+  const isTextContent = (prop: unknown) =>
     typeof prop === 'string' || typeof prop === 'number';
 
   Object.entries(fiber.pendingProps).forEach(([name, prop]) => {
@@ -94,6 +132,7 @@ function updateProperties(fiber: Fiber): void {
       }
     } else if (isStyle(name)) {
       Object.entries(prop).forEach(([cssProperty, value]) => {
+        // @ts-ignore
         fiber.stateNode.style[cssProperty] = value;
       });
     }
@@ -129,7 +168,7 @@ function reconcileChildren(
   console.log(['reconcileChildren'], { fiber: workInProgress, children });
 
   if (Array.isArray(children) || typeof children === 'object') {
-    let previousFiber = null;
+    let previousFiber: Fiber;
     let alternate = current && current.child ? current && current.child : null;
     const elements: ReactElement[] = Array.isArray(children)
       ? children
@@ -146,6 +185,9 @@ function reconcileChildren(
       const effectTag = sameType ? Update : element ? Placement : Deletion;
       const newFiber = createFiberSimple({
         tag,
+        child: undefined,
+        memoizedState: undefined,
+        pendingProps: undefined,
         element,
         alternate,
         effectTag,
@@ -174,7 +216,7 @@ function reconcileChildren(
 function mountWorkInProgressHook() {
   console.log(['mountWorkInProgressHook']);
 
-  const hook = {
+  const hook: Hook = {
     memoizedState: null,
     baseState: null,
     baseQueue: null,
@@ -222,7 +264,7 @@ function updateWorkInProgressHook() {
   } else {
     currentHook = nextCurrentHook;
 
-    const newHook = {
+    const newHook: Hook = {
       memoizedState: currentHook.memoizedState,
       baseState: currentHook.baseState,
       baseQueue: currentHook.baseQueue,
@@ -240,13 +282,13 @@ function updateWorkInProgressHook() {
   return workInProgressHook;
 }
 
-function basicStateReducer(state, action) {
+function basicStateReducer(state: unknown, action: unknown) {
   console.log(['basicStateReducer'], { state, action });
 
   return typeof action === 'function' ? action(state) : action;
 }
 
-function updateReducer(reducer) {
+function updateReducer(reducer: typeof basicStateReducer) {
   console.log(['updateReducer'], { reducer });
 
   const hook = updateWorkInProgressHook();
@@ -286,7 +328,7 @@ function updateState() {
   return updateReducer(basicStateReducer);
 }
 
-function scheduleWork(fiber) {
+function scheduleWork(fiber: Fiber) {
   console.log(['scheduleWork'], { fiber });
 
   currentRootFiber = createFiberSimple({
@@ -294,18 +336,24 @@ function scheduleWork(fiber) {
     stateNode: finishedRootFiber.stateNode,
     element: {
       props: finishedRootFiber.pendingProps,
+      type: undefined,
     },
     alternate: finishedRootFiber,
+    effectTag: undefined,
+    child: undefined,
+    memoizedState: undefined,
+    parentFiber: undefined,
+    pendingProps: undefined,
   });
   currentFiber = currentRootFiber;
 
   performSyncWorkOnRoot(currentRootFiber);
 }
 
-function dispatchAction(fiber: Fiber, queue, action) {
+function dispatchAction(fiber: Fiber, queue: HookQueue, action: Function) {
   console.log(['dispatchAction'], { fiber, queue, action });
 
-  const update = {
+  const update: HookUpdate = {
     action: action,
     next: null,
   };
@@ -323,7 +371,7 @@ function dispatchAction(fiber: Fiber, queue, action) {
   scheduleWork(fiber);
 }
 
-function mountState(initialState) {
+function mountState(initialState: unknown) {
   console.log(['mountState'], { initialState });
 
   const hook = mountWorkInProgressHook();
@@ -337,7 +385,7 @@ function mountState(initialState) {
   const queue = (hook.queue = {
     pending: null,
     dispatch: null,
-  });
+  } as any);
   const dispatch = (queue.dispatch = dispatchAction.bind(
     null,
     currentFiber,
@@ -347,22 +395,12 @@ function mountState(initialState) {
   return [hook.memoizedState, dispatch];
 }
 
-dispatcherOnMount = {
-  useState: function (initialState) {
-    console.log(['dispatcherOnMount.useState'], { initialState });
-
-    return mountState(initialState);
-  },
-};
-dispatcherOnUpdate = {
-  useState: function (initialState) {
-    console.log(['dispatcherOnUpdate.useState'], { initialState });
-
-    return updateState();
-  },
-};
-
-function renderWithHooks(current, workInProgress, Component, props) {
+function renderWithHooks(
+  current: Fiber,
+  workInProgress: Fiber,
+  Component: Function,
+  props: Props,
+) {
   console.log(['renderWithHooks'], {
     current,
     workInProgress,
@@ -371,7 +409,6 @@ function renderWithHooks(current, workInProgress, Component, props) {
   });
 
   workInProgress.memoizedState = null;
-  workInProgress.updateQueue = null;
 
   if (current !== null && current.memoizedState !== null) {
     currentDispatcher = dispatcherOnUpdate;
@@ -413,7 +450,11 @@ function updateFunctionComponent(
   return workInProgress.child;
 }
 
-function mountIndeterminateComponent(current, workInProgress, Component) {
+function mountIndeterminateComponent(
+  current: Fiber,
+  workInProgress: Fiber,
+  Component: Function,
+) {
   console.log(['mountIndeterminateComponent'], {
     current,
     workInProgress,
@@ -442,7 +483,7 @@ function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
       return mountIndeterminateComponent(
         current,
         currentFiber,
-        currentFiber.type,
+        currentFiber.type as Function,
       );
     }
     case FunctionComponent: {
@@ -465,14 +506,14 @@ function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
   }
 }
 
-function performUnitOfWork(unitOfWork) {
-  console.log(['performUnitOfWork'], { unitOfWork });
+function performUnitOfWork(workInProgress: Fiber) {
+  console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
 
-  const current = unitOfWork.alternate;
-  const next = beginWork(current, unitOfWork);
+  const current = workInProgress.alternate;
+  const next = beginWork(current, workInProgress);
 
   if (next === null) {
-    return completeUnitOfWork(unitOfWork);
+    return completeUnitOfWork(workInProgress);
   }
 
   return next;
@@ -486,7 +527,7 @@ function workLoopSync() {
   }
 }
 
-function finishSyncRender(root) {
+function finishSyncRender(root: Fiber) {
   console.log(['finishSyncRender'], { root });
 
   commitWork(root.child);
@@ -494,7 +535,7 @@ function finishSyncRender(root) {
   currentRootFiber = null;
 }
 
-function performSyncWorkOnRoot(root: Fiber) {
+function performSyncWorkOnRoot(root: Fiber): null {
   console.log(['performSyncWorkOnRoot'], root);
 
   if (currentFiber !== null) {
@@ -520,6 +561,16 @@ function createFiberSimple({
   memoizedState = null,
   pendingProps = {},
   child = null,
+}: {
+  element: ReactElement | null;
+  tag: Tag;
+  parentFiber: Fiber;
+  stateNode: HTMLElement | null;
+  alternate: Fiber | null;
+  effectTag: EffectTag;
+  memoizedState: unknown;
+  pendingProps: Props;
+  child: Fiber | null;
 }): Fiber {
   console.log(['createFiberSimple'], { element, tag, parentFiber, stateNode });
 
@@ -537,7 +588,11 @@ function createFiberSimple({
   };
 }
 
-function createElement(type, props, ...children): ReactElement {
+function createElement(
+  type: string | Function,
+  props: Props,
+  ...children: any[]
+): ReactElement {
   console.log(['createElement'], { type, props, children });
 
   return {
@@ -553,9 +608,15 @@ function render(children: ReactElement, container: HTMLElement) {
   console.log(['render'], { children, container });
 
   currentRootFiber = createFiberSimple({
+    child: undefined,
+    effectTag: undefined,
+    memoizedState: undefined,
+    parentFiber: undefined,
+    pendingProps: undefined,
     tag: HostRoot,
     stateNode: container,
     element: {
+      type: undefined,
       props: {
         children,
       },
@@ -565,7 +626,7 @@ function render(children: ReactElement, container: HTMLElement) {
   currentFiber = currentRootFiber;
 }
 
-function useState(initialState) {
+function useState<T>(initialState: T) {
   return currentDispatcher.useState(initialState);
 }
 
