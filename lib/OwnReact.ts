@@ -26,6 +26,7 @@ interface Fiber {
   alternate: Fiber | null; // powiązanie do Fibera, który reprezentuje wyrenderowany Fiber
   effectTag: EffectTag; // rodzaj pracy do wykonania na Fiberze
   memoizedState: any; // powiązana lista hooków
+  path: []; // zmienna pomocnicza do wizualizacji fiberów
 }
 
 interface Hook {
@@ -66,25 +67,122 @@ let currentDispatcher:
   | typeof dispatcherOnMount
   | typeof dispatcherOnUpdate
   | null = null;
+
+import { SVG } from '@svgdotjs/svg.js';
+const draw = SVG().addTo('#fiberView').size(2000, 2000);
+const rect = draw.circle(100, 100).attr({ fill: '#f06' });
+let fibersCount = 0;
+
+function countReturnsToRoot(fiber: Fiber) {
+  let count = 0;
+  let current = fiber;
+
+  while (current) {
+    count++;
+    current = current.return;
+  }
+
+  return count;
+}
+
+function countSiblingsToRoot(path: ('child' | 'sibling')[]) {
+  return path.filter((p) => p === 'sibling').length;
+}
+
+function countContinuousSiblings(path: ('child' | 'sibling')[]) {
+  let count = 0;
+  const reversedPath = path.reverse();
+
+  console.log(['countContinuousSiblings'], reversedPath);
+
+  reversedPath.find((p, index, arr) => {
+    if (p === 'child') {
+      count = index + 1;
+
+      return true;
+    }
+
+    return false;
+  });
+
+  return count;
+}
+
+function getChildOrder(fiber: Fiber) {
+  if (fiber === null || fiber.return === null) {
+    return 0;
+  }
+
+  const parent = fiber.return;
+  let child = parent.child;
+  let order = 0;
+
+  while (child !== fiber) {
+    order++;
+    child = child.sibling;
+  }
+
+  return order;
+}
+
+function traverseFiber(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+) {
+  console.log(['traverseFiber'], path);
+
+  const cx = 100 * path.siblingsDepth + 50;
+  const cy = 100 * path.childDepth + 50;
+  const attr = { fill: '#f06' };
+
+  console.log(['cx'], cx);
+  console.log(['cy'], cy);
+
+  draw.circle(100, 100).attr(attr).cx(cx).cy(cy);
+
+  fibersCount++;
+
+  if (fiber.child) {
+    traverseFiber(fiber.child, { ...path, childDepth: path.childDepth + 1 });
+  }
+
+  if (fiber.sibling) {
+    traverseFiber(fiber.sibling, {
+      ...path,
+      siblingsDepth: path.siblingsDepth + 1,
+    });
+  }
+}
+
+function setCurrentFiber(fiber: Fiber) {
+  // console.log(['setCurrentFiber'], fiber);
+
+  draw.clear();
+  fibersCount = 0;
+
+  traverseFiber(currentRootFiber, { childDepth: 0, siblingsDepth: 0 });
+  currentFiber = fiber;
+}
+
 const dispatcherOnMount = {
   useState: function <T>(initialState: T) {
-    console.log(['dispatcherOnMount.useState'], { initialState });
+    // console.log(['dispatcherOnMount.useState'], { initialState });
 
     return mountState(initialState);
   },
 };
 const dispatcherOnUpdate = {
   useState: function <T>(initialState: T) {
-    console.log(['dispatcherOnUpdate.useState'], { initialState });
+    // console.log(['dispatcherOnUpdate.useState'], { initialState });
 
     return updateState();
   },
 };
 
-function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
-  console.log(['completeUnitOfWork'], unitOfWork);
+function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
+  // console.log(['completeUnitOfWork'], workInProgress);
 
-  currentFiber = unitOfWork;
+  setCurrentFiber(workInProgress);
 
   do {
     if (currentFiber.tag === HostComponent && currentFiber.stateNode === null) {
@@ -97,14 +195,14 @@ function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
       return currentFiber.sibling;
     }
 
-    currentFiber = currentFiber.return;
+    setCurrentFiber(currentFiber.return);
   } while (currentFiber !== null);
 
   return null;
 }
 
 function updateProperties(fiber: Fiber): void {
-  console.log(['updateProperties'], { fiber });
+  // console.log(['updateProperties'], { fiber });
 
   const isEvent = (key: string) => key.startsWith('on');
   const isStyle = (key: string) => key === 'style';
@@ -140,7 +238,7 @@ function updateProperties(fiber: Fiber): void {
 }
 
 function commitWork(fiber: Fiber): void {
-  console.log(['commitWork'], { fiber });
+  // console.log(['commitWork'], { fiber });
 
   if (fiber.stateNode != null) {
     let closestParentWithNode = fiber.return;
@@ -165,7 +263,7 @@ function reconcileChildren(
   workInProgress: Fiber,
   children: unknown,
 ): void {
-  console.log(['reconcileChildren'], { fiber: workInProgress, children });
+  // console.log(['reconcileChildren'], { fiber: workInProgress, children });
 
   if (Array.isArray(children) || typeof children === 'object') {
     let previousFiber: Fiber;
@@ -214,7 +312,7 @@ function reconcileChildren(
 }
 
 function mountWorkInProgressHook() {
-  console.log(['mountWorkInProgressHook']);
+  // console.log(['mountWorkInProgressHook']);
 
   const hook: Hook = {
     memoizedState: null,
@@ -234,7 +332,7 @@ function mountWorkInProgressHook() {
 }
 
 function updateWorkInProgressHook() {
-  console.log(['updateWorkInProgressHook']);
+  // console.log(['updateWorkInProgressHook']);
 
   let nextCurrentHook;
 
@@ -283,13 +381,13 @@ function updateWorkInProgressHook() {
 }
 
 function basicStateReducer(state: unknown, action: unknown) {
-  console.log(['basicStateReducer'], { state, action });
+  // console.log(['basicStateReducer'], { state, action });
 
   return typeof action === 'function' ? action(state) : action;
 }
 
 function updateReducer(reducer: typeof basicStateReducer) {
-  console.log(['updateReducer'], { reducer });
+  // console.log(['updateReducer'], { reducer });
 
   const hook = updateWorkInProgressHook();
   const queue = hook.queue;
@@ -323,13 +421,13 @@ function updateReducer(reducer: typeof basicStateReducer) {
 }
 
 function updateState() {
-  console.log(['updateState']);
+  // console.log(['updateState']);
 
   return updateReducer(basicStateReducer);
 }
 
 function scheduleWork(fiber: Fiber) {
-  console.log(['scheduleWork'], { fiber });
+  // console.log(['scheduleWork'], { fiber });
 
   currentRootFiber = createFiberSimple({
     tag: HostRoot,
@@ -345,13 +443,13 @@ function scheduleWork(fiber: Fiber) {
     parentFiber: undefined,
     pendingProps: undefined,
   });
-  currentFiber = currentRootFiber;
 
+  setCurrentFiber(currentRootFiber);
   performSyncWorkOnRoot(currentRootFiber);
 }
 
 function dispatchAction(fiber: Fiber, queue: HookQueue, action: Function) {
-  console.log(['dispatchAction'], { fiber, queue, action });
+  // console.log(['dispatchAction'], { fiber, queue, action });
 
   const update: HookUpdate = {
     action: action,
@@ -372,7 +470,7 @@ function dispatchAction(fiber: Fiber, queue: HookQueue, action: Function) {
 }
 
 function mountState(initialState: unknown) {
-  console.log(['mountState'], { initialState });
+  // console.log(['mountState'], { initialState });
 
   const hook = mountWorkInProgressHook();
 
@@ -401,12 +499,12 @@ function renderWithHooks(
   Component: Function,
   props: Props,
 ) {
-  console.log(['renderWithHooks'], {
-    current,
-    workInProgress,
-    Component,
-    props,
-  });
+  // console.log(['renderWithHooks'], {
+  //   current,
+  //   workInProgress,
+  //   Component,
+  //   props,
+  // });
 
   workInProgress.memoizedState = null;
 
@@ -431,12 +529,12 @@ function updateFunctionComponent(
   Component: Function,
   nextProps: Props,
 ) {
-  console.log(['updateFunctionComponent'], {
-    current,
-    workInProgress,
-    Component,
-    nextProps,
-  });
+  // console.log(['updateFunctionComponent'], {
+  //   current,
+  //   workInProgress,
+  //   Component,
+  //   nextProps,
+  // });
 
   const nextChildren = renderWithHooks(
     current,
@@ -455,11 +553,11 @@ function mountIndeterminateComponent(
   workInProgress: Fiber,
   Component: Function,
 ) {
-  console.log(['mountIndeterminateComponent'], {
-    current,
-    workInProgress,
-    Component,
-  });
+  // console.log(['mountIndeterminateComponent'], {
+  //   current,
+  //   workInProgress,
+  //   Component,
+  // });
 
   const children = renderWithHooks(
     null,
@@ -476,7 +574,7 @@ function mountIndeterminateComponent(
 }
 
 function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
-  console.log(['beginWork'], { current, unitOfWork });
+  // console.log(['beginWork'], { current, unitOfWork });
 
   switch (unitOfWork.tag) {
     case IndeterminateComponent: {
@@ -507,7 +605,7 @@ function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
 }
 
 function performUnitOfWork(workInProgress: Fiber) {
-  console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
+  // console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
 
   const current = workInProgress.alternate;
   const next = beginWork(current, workInProgress);
@@ -520,15 +618,15 @@ function performUnitOfWork(workInProgress: Fiber) {
 }
 
 function workLoopSync() {
-  console.log(['workLoopSync']);
+  // console.log(['workLoopSync']);
 
   while (currentFiber !== null) {
-    currentFiber = performUnitOfWork(currentFiber);
+    setCurrentFiber(performUnitOfWork(currentFiber));
   }
 }
 
 function finishSyncRender(root: Fiber) {
-  console.log(['finishSyncRender'], { root });
+  // console.log(['finishSyncRender'], { root });
 
   commitWork(root.child);
   finishedRootFiber = currentRootFiber;
@@ -536,7 +634,7 @@ function finishSyncRender(root: Fiber) {
 }
 
 function performSyncWorkOnRoot(root: Fiber): null {
-  console.log(['performSyncWorkOnRoot'], root);
+  // console.log(['performSyncWorkOnRoot'], root);
 
   if (currentFiber !== null) {
     workLoopSync();
@@ -572,7 +670,7 @@ function createFiberSimple({
   pendingProps: Props;
   child: Fiber | null;
 }): Fiber {
-  console.log(['createFiberSimple'], { element, tag, parentFiber, stateNode });
+  // console.log(['createFiberSimple'], { element, tag, parentFiber, stateNode });
 
   return {
     alternate,
@@ -593,7 +691,7 @@ function createElement(
   props: Props,
   ...children: any[]
 ): ReactElement {
-  console.log(['createElement'], { type, props, children });
+  // console.log(['createElement'], { type, props, children });
 
   return {
     type,
@@ -605,7 +703,7 @@ function createElement(
 }
 
 function render(children: ReactElement, container: HTMLElement) {
-  console.log(['render'], { children, container });
+  // console.log(['render'], { children, container });
 
   currentRootFiber = createFiberSimple({
     child: undefined,
@@ -623,7 +721,7 @@ function render(children: ReactElement, container: HTMLElement) {
     },
     alternate: finishedRootFiber,
   });
-  currentFiber = currentRootFiber;
+  setCurrentFiber(currentRootFiber);
 }
 
 function useState<T>(initialState: T) {
