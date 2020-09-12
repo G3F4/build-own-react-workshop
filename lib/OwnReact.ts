@@ -125,6 +125,16 @@ function getChildOrder(fiber: Fiber) {
   return order;
 }
 
+const nextButton = document.querySelector('[value="NEXT"]');
+
+nextButton.addEventListener('click', () => {
+  block = false;
+});
+
+let block = true;
+
+console.log(['nextButton'], nextButton);
+
 function traverseFiber(
   fiber: Fiber,
   path: { childDepth: number; siblingsDepth: number },
@@ -139,6 +149,12 @@ function traverseFiber(
   console.log(['cy'], cy);
 
   draw.circle(100, 100).attr(attr).cx(cx).cy(cy);
+
+  if (typeof fiber.type === 'string') {
+    const text = draw.text(fiber.type);
+
+    text.move(cx, cy).font({ fill: '#000', family: 'Inconsolata' });
+  }
 
   fibersCount++;
 
@@ -605,7 +621,7 @@ function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
 }
 
 function performUnitOfWork(workInProgress: Fiber) {
-  // console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
+  console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
 
   const current = workInProgress.alternate;
   const next = beginWork(current, workInProgress);
@@ -618,7 +634,7 @@ function performUnitOfWork(workInProgress: Fiber) {
 }
 
 function workLoopSync() {
-  // console.log(['workLoopSync']);
+  console.log(['workLoopSync']);
 
   while (currentFiber !== null) {
     setCurrentFiber(performUnitOfWork(currentFiber));
