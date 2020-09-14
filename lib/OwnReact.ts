@@ -69,15 +69,14 @@ let currentDispatcher:
 
 import { SVG } from '@svgdotjs/svg.js';
 const draw = SVG().addTo('#fiberView').size(2000, 2000);
-const nextButton = document.querySelector('[value="NEXT"]');
+const renderButton = document.querySelector('[value="RENDER"]');
+const commitWorkButton = document.querySelector('[value="COMMIT_WORK"]');
+const workLoopButton = document.querySelector('[value="WORK_LOOP"]');
+const finishWorkButton = document.querySelector('[value="FINISH_WORK"]');
 
-nextButton.addEventListener('click', () => {
-  block = false;
+workLoopButton.addEventListener('click', () => {
+  workLoopSync();
 });
-
-let block = true;
-
-console.log(['nextButton'], nextButton);
 
 function getFiberLabel(fiber: Fiber) {
   if (typeof fiber.type === 'string') {
@@ -116,7 +115,7 @@ function traverseFiber(
     path: { childDepth: number; siblingsDepth: number },
   ) => void,
 ) {
-  console.log(['traverseFiber'], path);
+  // console.log(['traverseFiber'], path);
 
   callback(fiber, path);
 
@@ -218,7 +217,7 @@ const dispatcherOnUpdate = {
 };
 
 function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
-  // console.log(['completeUnitOfWork'], workInProgress);
+  console.log(['completeUnitOfWork'], workInProgress);
 
   setCurrentFiber(workInProgress);
 
@@ -276,7 +275,7 @@ function updateProperties(fiber: Fiber): void {
 }
 
 function commitWork(fiber: Fiber): void {
-  // console.log(['commitWork'], { fiber });
+  console.log(['commitWork'], { fiber });
 
   if (fiber.stateNode != null) {
     let closestParentWithNode = fiber.return;
@@ -292,8 +291,28 @@ function commitWork(fiber: Fiber): void {
     updateProperties(fiber);
   }
 
-  fiber.child && commitWork(fiber.child);
-  fiber.sibling && commitWork(fiber.sibling);
+  if (fiber.child) {
+    commitWorkButton.addEventListener(
+      'click',
+      () => {
+        commitWork(fiber.child);
+      },
+      { once: true },
+    );
+  }
+
+  if (fiber.sibling) {
+    commitWorkButton.addEventListener(
+      'click',
+      () => {
+        commitWork(fiber.sibling);
+      },
+      { once: true },
+    );
+  }
+
+  // fiber.child && commitWork(fiber.child);
+  // fiber.sibling && commitWork(fiber.sibling);
 }
 
 function reconcileChildren(
@@ -464,7 +483,7 @@ function updateState() {
   return updateReducer(basicStateReducer);
 }
 
-function scheduleWork(fiber: Fiber) {
+function scheduleWork() {
   // console.log(['scheduleWork'], { fiber });
 
   currentRootFiber = createFiberSimple({
@@ -504,7 +523,7 @@ function dispatchAction(fiber: Fiber, queue: HookQueue, action: Function) {
 
   queue.pending = update;
 
-  scheduleWork(fiber);
+  scheduleWork();
 }
 
 function mountState(initialState: unknown) {
@@ -612,7 +631,7 @@ function mountIndeterminateComponent(
 }
 
 function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
-  // console.log(['beginWork'], { current, unitOfWork });
+  console.log(['beginWork'], { current, unitOfWork });
 
   switch (unitOfWork.tag) {
     case IndeterminateComponent: {
@@ -643,7 +662,8 @@ function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
 }
 
 function performUnitOfWork(workInProgress: Fiber) {
-  console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
+  console.log('#'.repeat(120));
+  console.log(['performUnitOfWork'], getFiberLabel(workInProgress));
 
   const current = workInProgress.alternate;
   const next = beginWork(current, workInProgress);
@@ -658,34 +678,41 @@ function performUnitOfWork(workInProgress: Fiber) {
 function workLoopSync() {
   console.log(['workLoopSync']);
 
-  while (currentFiber !== null) {
+  if (currentFiber !== null) {
     setCurrentFiber(performUnitOfWork(currentFiber));
   }
 }
 
-function finishSyncRender(root: Fiber) {
-  // console.log(['finishSyncRender'], { root });
+function finishSyncRender() {
+  console.log(['finishSyncRender']);
 
-  commitWork(root.child);
+  commitWork(currentRootFiber.child);
   finishedRootFiber = currentRootFiber;
   currentRootFiber = null;
 }
 
+finishWorkButton.addEventListener('click', () => {
+  commitWork(currentRootFiber.child);
+  finishedRootFiber = currentRootFiber;
+  currentRootFiber = null;
+});
+
 function performSyncWorkOnRoot(root: Fiber): null {
-  // console.log(['performSyncWorkOnRoot'], root);
+  console.log(['performSyncWorkOnRoot'], root);
 
   if (currentFiber !== null) {
     workLoopSync();
 
-    finishSyncRender(root);
+    finishSyncRender();
   }
 
   return null;
 }
 
-requestIdleCallback(() => {
-  performSyncWorkOnRoot(currentRootFiber);
-});
+// requestIdleCallback(() => {
+//   console.log(['requestIdleCallback']);
+//   performSyncWorkOnRoot(currentRootFiber);
+// });
 
 function createFiberSimple({
   element,
@@ -743,23 +770,29 @@ function createElement(
 function render(children: ReactElement, container: HTMLElement) {
   // console.log(['render'], { children, container });
 
-  currentRootFiber = createFiberSimple({
-    child: undefined,
-    effectTag: undefined,
-    memoizedState: undefined,
-    parentFiber: undefined,
-    pendingProps: undefined,
-    tag: HostRoot,
-    stateNode: container,
-    element: {
-      type: undefined,
-      props: {
-        children,
-      },
+  renderButton.addEventListener(
+    'click',
+    () => {
+      currentRootFiber = createFiberSimple({
+        child: undefined,
+        effectTag: undefined,
+        memoizedState: undefined,
+        parentFiber: undefined,
+        pendingProps: undefined,
+        tag: HostRoot,
+        stateNode: container,
+        element: {
+          type: undefined,
+          props: {
+            children,
+          },
+        },
+        alternate: finishedRootFiber,
+      });
+      setCurrentFiber(currentRootFiber);
     },
-    alternate: finishedRootFiber,
-  });
-  setCurrentFiber(currentRootFiber);
+    { once: true },
+  );
 }
 
 function useState<T>(initialState: T) {
