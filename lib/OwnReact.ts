@@ -68,11 +68,19 @@ let currentDispatcher:
   | null = null;
 
 import { SVG } from '@svgdotjs/svg.js';
-const draw = SVG().addTo('#fiberView').size(2000, 2000);
-const renderButton = document.querySelector('[value="RENDER"]');
-const commitWorkButton = document.querySelector('[value="COMMIT_WORK"]');
-const workLoopButton = document.querySelector('[value="WORK_LOOP"]');
-const finishWorkButton = document.querySelector('[value="FINISH_WORK"]');
+const draw = SVG().addTo('#fiberView').size(800, 1000);
+const renderButton: HTMLButtonElement = document.querySelector(
+  '[value="RENDER"]',
+);
+const commitWorkButton: HTMLButtonElement = document.querySelector(
+  '[value="COMMIT_WORK"]',
+);
+const workLoopButton: HTMLButtonElement = document.querySelector(
+  '[value="WORK_LOOP"]',
+);
+const finishWorkButton: HTMLButtonElement = document.querySelector(
+  '[value="FINISH_WORK"]',
+);
 
 workLoopButton.addEventListener('click', () => {
   workLoopSync();
@@ -145,10 +153,14 @@ function drawFiber(
 ) {
   const cx = 150 * path.siblingsDepth + 75;
   const cy = 100 * path.childDepth + 50;
-  const attr = { fill: '#f06' };
   const fiberLabel = getFiberLabel(fiber);
+  const drawingCurrent = fiber === currentFiber;
 
-  draw.rect(140, 90).attr(attr).cx(cx).cy(cy);
+  if (drawingCurrent) {
+    draw.rect(150, 100).attr({ fill: 'black' }).cx(cx).cy(cy);
+  }
+
+  draw.rect(140, 90).attr({ fill: '#f06' }).cx(cx).cy(cy);
 
   draw
     .text(fiberLabel)
@@ -185,20 +197,19 @@ function drawFiberLinks(
 
 function setCurrentFiber(fiber: Fiber) {
   // console.log(['setCurrentFiber'], fiber);
-
+  currentFiber = fiber;
   draw.clear();
 
   traverseFiber(
-    currentRootFiber,
+    currentRootFiber || finishedRootFiber,
     { childDepth: 0, siblingsDepth: 0 },
     drawFiber,
   );
   traverseFiber(
-    currentRootFiber,
+    currentRootFiber || finishedRootFiber,
     { childDepth: 0, siblingsDepth: 0 },
     drawFiberLinks,
   );
-  currentFiber = fiber;
 }
 
 const dispatcherOnMount = {
@@ -276,6 +287,7 @@ function updateProperties(fiber: Fiber): void {
 
 function commitWork(fiber: Fiber): void {
   console.log(['commitWork'], { fiber });
+  setCurrentFiber(fiber);
 
   if (fiber.stateNode != null) {
     let closestParentWithNode = fiber.return;
@@ -679,7 +691,13 @@ function workLoopSync() {
   console.log(['workLoopSync']);
 
   if (currentFiber !== null) {
-    setCurrentFiber(performUnitOfWork(currentFiber));
+    const nextWork = performUnitOfWork(currentFiber);
+
+    setCurrentFiber(nextWork);
+
+    if (nextWork === null) {
+      workLoopButton.disabled = true;
+    }
   }
 }
 
@@ -695,6 +713,7 @@ finishWorkButton.addEventListener('click', () => {
   commitWork(currentRootFiber.child);
   finishedRootFiber = currentRootFiber;
   currentRootFiber = null;
+  finishWorkButton.disabled = true;
 });
 
 function performSyncWorkOnRoot(root: Fiber): null {
@@ -790,6 +809,7 @@ function render(children: ReactElement, container: HTMLElement) {
         alternate: finishedRootFiber,
       });
       setCurrentFiber(currentRootFiber);
+      renderButton.disabled = true;
     },
     { once: true },
   );
