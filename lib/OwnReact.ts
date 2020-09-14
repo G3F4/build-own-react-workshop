@@ -70,42 +70,26 @@ let currentDispatcher:
 
 import { SVG } from '@svgdotjs/svg.js';
 const draw = SVG().addTo('#fiberView').size(2000, 2000);
-const rect = draw.circle(100, 100).attr({ fill: '#f06' });
-let fibersCount = 0;
+const nextButton = document.querySelector('[value="NEXT"]');
 
-function countReturnsToRoot(fiber: Fiber) {
-  let count = 0;
-  let current = fiber;
+nextButton.addEventListener('click', () => {
+  block = false;
+});
 
-  while (current) {
-    count++;
-    current = current.return;
+let block = true;
+
+console.log(['nextButton'], nextButton);
+
+function getFiberLabel(fiber: Fiber) {
+  if (typeof fiber.type === 'string') {
+    return fiber.type;
   }
 
-  return count;
-}
+  if (typeof fiber.type === 'function') {
+    return fiber.type.name;
+  }
 
-function countSiblingsToRoot(path: ('child' | 'sibling')[]) {
-  return path.filter((p) => p === 'sibling').length;
-}
-
-function countContinuousSiblings(path: ('child' | 'sibling')[]) {
-  let count = 0;
-  const reversedPath = path.reverse();
-
-  console.log(['countContinuousSiblings'], reversedPath);
-
-  reversedPath.find((p, index, arr) => {
-    if (p === 'child') {
-      count = index + 1;
-
-      return true;
-    }
-
-    return false;
-  });
-
-  return count;
+  return 'div#root';
 }
 
 function getChildOrder(fiber: Fiber) {
@@ -125,48 +109,79 @@ function getChildOrder(fiber: Fiber) {
   return order;
 }
 
-const nextButton = document.querySelector('[value="NEXT"]');
-
-nextButton.addEventListener('click', () => {
-  block = false;
-});
-
-let block = true;
-
-console.log(['nextButton'], nextButton);
-
 function traverseFiber(
   fiber: Fiber,
   path: { childDepth: number; siblingsDepth: number },
+  callback: (
+    fiber: Fiber,
+    path: { childDepth: number; siblingsDepth: number },
+  ) => void,
 ) {
   console.log(['traverseFiber'], path);
 
-  const cx = 100 * path.siblingsDepth + 50;
-  const cy = 100 * path.childDepth + 50;
-  const attr = { fill: '#f06' };
-
-  console.log(['cx'], cx);
-  console.log(['cy'], cy);
-
-  draw.circle(100, 100).attr(attr).cx(cx).cy(cy);
-
-  if (typeof fiber.type === 'string') {
-    const text = draw.text(fiber.type);
-
-    text.move(cx, cy).font({ fill: '#000', family: 'Inconsolata' });
-  }
-
-  fibersCount++;
+  callback(fiber, path);
 
   if (fiber.child) {
-    traverseFiber(fiber.child, { ...path, childDepth: path.childDepth + 1 });
+    traverseFiber(
+      fiber.child,
+      { ...path, childDepth: path.childDepth + 1 },
+      callback,
+    );
   }
 
   if (fiber.sibling) {
-    traverseFiber(fiber.sibling, {
-      ...path,
-      siblingsDepth: path.siblingsDepth + 1,
-    });
+    traverseFiber(
+      fiber.sibling,
+      {
+        ...path,
+        siblingsDepth: path.siblingsDepth + 1,
+      },
+      callback,
+    );
+  }
+}
+
+function drawFiber(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+) {
+  const cx = 150 * path.siblingsDepth + 75;
+  const cy = 100 * path.childDepth + 50;
+  const attr = { fill: '#f06' };
+  const fiberLabel = getFiberLabel(fiber);
+
+  draw.rect(140, 90).attr(attr).cx(cx).cy(cy);
+
+  draw
+    .text(fiberLabel)
+    .move(cx - 60, cy - 30)
+    .font({ fill: '#000', family: 'Inconsolata' });
+}
+
+function drawFiberLinks(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+) {
+  const cx = 150 * path.siblingsDepth + 75;
+  const cy = 100 * path.childDepth + 50;
+  const childOrder = getChildOrder(fiber);
+
+  if (fiber.return) {
+    draw
+      .line(cx + 20, cy - 40, cx + 20 - childOrder * 150, cy - 60)
+      .stroke({ color: 'green', width: 8, linecap: 'round' });
+  }
+
+  if (fiber.child) {
+    draw
+      .line(cx, cy + 40, cx, cy + 60)
+      .stroke({ color: 'yellow', width: 8, linecap: 'round' });
+  }
+
+  if (fiber.sibling) {
+    draw
+      .line(cx + 60, cy + 20, cx + 90, cy + 20)
+      .stroke({ color: 'orange', width: 8, linecap: 'round' });
   }
 }
 
@@ -174,9 +189,17 @@ function setCurrentFiber(fiber: Fiber) {
   // console.log(['setCurrentFiber'], fiber);
 
   draw.clear();
-  fibersCount = 0;
 
-  traverseFiber(currentRootFiber, { childDepth: 0, siblingsDepth: 0 });
+  traverseFiber(
+    currentRootFiber,
+    { childDepth: 0, siblingsDepth: 0 },
+    drawFiber,
+  );
+  traverseFiber(
+    currentRootFiber,
+    { childDepth: 0, siblingsDepth: 0 },
+    drawFiberLinks,
+  );
   currentFiber = fiber;
 }
 

@@ -45,9 +45,7 @@ function App() {
     console.log(['decrease']);
 
     if (count > jump) {
-      setCount((c) => {
-        return c - jump;
-      });
+      setCount((c) => c - jump);
     }
   }
 
