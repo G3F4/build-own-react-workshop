@@ -1,344 +1,773 @@
-// typ pojedynczego propa
 type Prop =
   | string
   | EventListenerOrEventListenerObject
   | Record<string, string>
   | ReactElement;
 
-// typ obiektu reprezentującego propsy
 type Props = Record<string, Prop>;
+const Placement = 2;
+const Update = 4;
+const Deletion = 8;
+type EffectTag = typeof Placement | typeof Update | typeof Deletion;
+type Tag =
+  | typeof FunctionComponent
+  | typeof HostRoot
+  | typeof HostComponent
+  | typeof IndeterminateComponent;
 
-// interfejs Fibera, czyli obiektu reprezentującego jednostkę pracy
 interface Fiber {
-  tag: number; // typ Fibera
+  tag: Tag; // typ Fibera
   stateNode: HTMLElement | null; // element DOM, z którym jest związany Fiber
   type: Function | string; // typ elementu React, z którym jest związany Fiber
-  props: Props; // propsy Elementu React, z którym jest związany Fiber
+  pendingProps: Props; // propsy Elementu React, z którym jest związany Fiber
   return: Fiber | null; // powiązanie do Fibera, który jest rodzicem dla tego Fibera
   sibling: Fiber | null; // powiązanie do Fibera, który jest rodzeństwem dla tego Fibera
   child: Fiber | null; // powiązanie do Fibera, który jest bezpośrednim dzieckiem dla tego Fibera
+  alternate: Fiber | null; // powiązanie do Fibera, który reprezentuje wyrenderowany Fiber
+  effectTag: EffectTag; // rodzaj pracy do wykonania na Fiberze
+  memoizedState: any; // powiązana lista hooków
 }
 
-// interfejs opisujący obiekt reprezentujący element React
+interface Hook {
+  memoizedState: unknown;
+  baseState: unknown;
+  baseQueue: HookQueue;
+  queue: any;
+  next: any;
+}
+
+interface HookQueue {
+  next: HookUpdate;
+  pending: any;
+  dispatch: Function;
+}
+
+interface HookUpdate {
+  action: Function;
+  next: HookUpdate;
+}
+
+let currentHook: Hook | null = null;
+let workInProgressHook: Hook | null = null;
+
 interface ReactElement {
-  type: Function | string; // typ elementu React, może to być funkcja, która jest komponentem albo string z nazwą elementu DOM
-  props: Props; // propsy elementu React
+  type: Function | string;
+  props: Props;
 }
 
-const FunctionComponent = 0; // stała reprezentująca rodzaj Fibera z komponentem funkcyjnym
-const HostRoot = 3; // stała reprezentująca rodzaj Fibera z elementem DOM kontenera aplikacji
-const HostComponent = 5; // stała reprezentująca rodzaj Fibera z elementem DOM
-let workInProgressRoot = null; // Fiber związany z kontenerem aplikacji
-let workInProgress = null; // Fiber, który reprezentuje aktualną pracę do wykonania
+const FunctionComponent = 0;
+const HostRoot = 3;
+const HostComponent = 5;
+const IndeterminateComponent = 2;
+let finishedRootFiber: Fiber = null;
+let currentRootFiber: Fiber = null;
+let currentFiber: Fiber = null;
+let currentDispatcher:
+  | typeof dispatcherOnMount
+  | typeof dispatcherOnUpdate
+  | null = null;
 
-/*
-funkcja kończąca jednostkę pracy
-wykorzystując wcześniej stworzone powiązania, przechodzi po wszystkich Fiberach
-i dla każdego Fibera, który reprezentuje element DOM
-tworzy ten element i zapisuje referencje w polu `stateNode`
-*/
-function completeUnitOfWork(unitOfWork: Fiber): Fiber | null {
-  console.log(['completeUnitOfWork'], unitOfWork);
+import { SVG } from '@svgdotjs/svg.js';
+const draw = SVG().addTo('#fiberView').size(2000, 2000);
+const nextButton = document.querySelector('[value="NEXT"]');
 
-  // ustawiamy aktualną jednostkę pracy
-  workInProgress = unitOfWork;
+nextButton.addEventListener('click', () => {
+  block = false;
+});
 
-  // co najmniej raz wykonujemy
+let block = true;
+
+console.log(['nextButton'], nextButton);
+
+function getFiberLabel(fiber: Fiber) {
+  if (typeof fiber.type === 'string') {
+    return fiber.type;
+  }
+
+  if (typeof fiber.type === 'function') {
+    return fiber.type.name;
+  }
+
+  return 'div#root';
+}
+
+function getChildOrder(fiber: Fiber) {
+  if (fiber === null || fiber.return === null) {
+    return 0;
+  }
+
+  const parent = fiber.return;
+  let child = parent.child;
+  let order = 0;
+
+  while (child !== fiber) {
+    order++;
+    child = child.sibling;
+  }
+
+  return order;
+}
+
+function traverseFiber(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+  callback: (
+    fiber: Fiber,
+    path: { childDepth: number; siblingsDepth: number },
+  ) => void,
+) {
+  console.log(['traverseFiber'], path);
+
+  callback(fiber, path);
+
+  if (fiber.child) {
+    traverseFiber(
+      fiber.child,
+      { ...path, childDepth: path.childDepth + 1 },
+      callback,
+    );
+  }
+
+  if (fiber.sibling) {
+    traverseFiber(
+      fiber.sibling,
+      {
+        ...path,
+        siblingsDepth: path.siblingsDepth + 1,
+      },
+      callback,
+    );
+  }
+}
+
+function drawFiber(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+) {
+  const cx = 150 * path.siblingsDepth + 75;
+  const cy = 100 * path.childDepth + 50;
+  const attr = { fill: '#f06' };
+  const fiberLabel = getFiberLabel(fiber);
+
+  draw.rect(140, 90).attr(attr).cx(cx).cy(cy);
+
+  draw
+    .text(fiberLabel)
+    .move(cx - 60, cy - 30)
+    .font({ fill: '#000', family: 'Inconsolata' });
+}
+
+function drawFiberLinks(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+) {
+  const cx = 150 * path.siblingsDepth + 75;
+  const cy = 100 * path.childDepth + 50;
+  const childOrder = getChildOrder(fiber);
+
+  if (fiber.return) {
+    draw
+      .line(cx + 20, cy - 40, cx + 20 - childOrder * 150, cy - 60)
+      .stroke({ color: 'green', width: 8, linecap: 'round' });
+  }
+
+  if (fiber.child) {
+    draw
+      .line(cx, cy + 40, cx, cy + 60)
+      .stroke({ color: 'yellow', width: 8, linecap: 'round' });
+  }
+
+  if (fiber.sibling) {
+    draw
+      .line(cx + 60, cy + 20, cx + 90, cy + 20)
+      .stroke({ color: 'orange', width: 8, linecap: 'round' });
+  }
+}
+
+function setCurrentFiber(fiber: Fiber) {
+  // console.log(['setCurrentFiber'], fiber);
+
+  draw.clear();
+
+  traverseFiber(
+    currentRootFiber,
+    { childDepth: 0, siblingsDepth: 0 },
+    drawFiber,
+  );
+  traverseFiber(
+    currentRootFiber,
+    { childDepth: 0, siblingsDepth: 0 },
+    drawFiberLinks,
+  );
+  currentFiber = fiber;
+}
+
+const dispatcherOnMount = {
+  useState: function <T>(initialState: T) {
+    // console.log(['dispatcherOnMount.useState'], { initialState });
+
+    return mountState(initialState);
+  },
+};
+const dispatcherOnUpdate = {
+  useState: function <T>(initialState: T) {
+    // console.log(['dispatcherOnUpdate.useState'], { initialState });
+
+    return updateState();
+  },
+};
+
+function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
+  // console.log(['completeUnitOfWork'], workInProgress);
+
+  setCurrentFiber(workInProgress);
+
   do {
-    // jeśli aktualny Fiber jest związany z elementem DOM
-    if (workInProgress.tag === HostComponent) {
-      // tworzymy ten element DOM
-      workInProgress.stateNode = document.createElement(workInProgress.type);
+    if (currentFiber.tag === HostComponent && currentFiber.stateNode === null) {
+      currentFiber.stateNode = document.createElement(
+        currentFiber.type as string,
+      );
     }
 
-    // jeśli posiada rodzeństwa
-    if (workInProgress.sibling !== null) {
-      // zwróć rodzeństwo
-      return workInProgress.sibling;
+    if (currentFiber.sibling !== null) {
+      return currentFiber.sibling;
     }
 
-    // jeśli doszliśmy do końca pętli, ustawiamy Fiber reprezentujący rodzica jako aktualna jednostka pracy
-    workInProgress = workInProgress.return;
-    // tak długo aż rodzic będzie nullem, czyli aż gdy dotrzemy do Fibera bez rodzica czyli Fibera powiązanego z kontenerem aplikacji
-  } while (workInProgress !== null);
+    setCurrentFiber(currentFiber.return);
+  } while (currentFiber !== null);
 
-  // jeśli Fiber nie posiadał więcej niż jedno dziecko, zwracamy null aby przerwać proces
   return null;
 }
 
-/*
-funkcja aktualizująca właściwości elementu DOM związanego z Fiberem
-jako argument dostaje Fiber
-*/
 function updateProperties(fiber: Fiber): void {
-  console.log(['updateProperties'], { fiber });
+  // console.log(['updateProperties'], { fiber });
 
-  // funkcja pomocnicza sprawdzająca czy props jest eventem
-  const isEvent = (key) => key.startsWith('on');
-  // funkcja pomocnicza sprawdzająca czy props jest obiektem styli
-  const isStyle = (key) => key === 'style';
-  // funkcja pomocnicza sprawdzająca czy props jest zwykłym tekstem
-  const isTextContent = (prop) =>
+  const isEvent = (key: string) => key.startsWith('on');
+  const isStyle = (key: string) => key === 'style';
+  const isTextContent = (prop: unknown) =>
     typeof prop === 'string' || typeof prop === 'number';
 
-  // iterujemy po wszystkich propsach
-  Object.entries(fiber.props).forEach(([name, prop]) => {
-    // jeśli prop jest zwykłym tekstem
+  Object.entries(fiber.pendingProps).forEach(([name, prop]) => {
     if (isTextContent(prop)) {
-      // ustawiamy atrybut textContent elementu DOM związanego z Fiberem
       fiber.stateNode.textContent = prop as string;
-      // jeśli prop jest eventem
     } else if (isEvent(name)) {
-      // zamieniamy wszystkie znaki nazwy eventu na małe i pomijamy prefix "on"
       const eventType = name.toLowerCase().substring(2);
 
-      // tak przygotowaną nazwę eventu wykorzystujemy aby zacząć nasłuchiwać na event
       fiber.stateNode.addEventListener(
         eventType,
-        fiber.props[name] as EventListenerOrEventListenerObject,
+        fiber.pendingProps[name] as EventListenerOrEventListenerObject,
       );
-      // jeśli prop jest obiektem styli
+
+      if (fiber.alternate) {
+        fiber.stateNode.removeEventListener(
+          eventType,
+          fiber.alternate.pendingProps[
+            name
+          ] as EventListenerOrEventListenerObject,
+        );
+      }
     } else if (isStyle(name)) {
-      // iterujemy do wszystkich stylach w obiekcie
       Object.entries(prop).forEach(([cssProperty, value]) => {
-        // i modyfikujemy wartość styli elementu DOM
+        // @ts-ignore
         fiber.stateNode.style[cssProperty] = value;
       });
     }
   });
 }
 
-/*
-funkcja dołącza do najbliższego rodzica elementu DOM znalezionego w wzwyż w hierarchii Fiberów
-jako argument dostaje Fiber, który jest aktualnie iterowany podczas rekurencyjnego przeglądania struktury Fiberów
-*/
 function commitWork(fiber: Fiber): void {
-  console.log(['commitWork'], { fiber });
+  // console.log(['commitWork'], { fiber });
 
-  // jeśli aktualny Fiber jest związany z elementem DOM
   if (fiber.stateNode != null) {
-    // szukamy najbliższego rodzica powiązanego z rzeczywistym elementem DOM
     let closestParentWithNode = fiber.return;
 
-    // jeśli aktualnie ustawiony rodzic nie jest związany z elementem DOM
     while (!closestParentWithNode.stateNode) {
-      // szukamy wyżej, u dziadka(rodzic rodzica)
       closestParentWithNode = closestParentWithNode.return;
     }
 
-    // dodajemy element DOM do nadrzędnego elementu DOM
-    closestParentWithNode.stateNode.appendChild(fiber.stateNode);
-    // a następnie aktualizujemy właściwości elementu DOM
+    if (fiber.effectTag === Placement) {
+      closestParentWithNode.stateNode.appendChild(fiber.stateNode);
+    }
+
     updateProperties(fiber);
   }
 
-  // jeśli Fiber posiada dziecko, zagłębiamy się rekurencyjnie
   fiber.child && commitWork(fiber.child);
-  // jeśli Fiber posiada sąsiada, zagłębiamy się rekurencyjnie
   fiber.sibling && commitWork(fiber.sibling);
 }
 
-/*
-funkcja tworząca powiązania Fibera do jego dzieci w postaci powiązanych Fiberów
-w procesie dla wszystkich dzieci Fibera zostaną utworzone własne Fibery
-*/
-function reconcileChildren(fiber: Fiber, children: unknown): void {
-  console.log(['reconcileChildren'], { fiber, children });
+function reconcileChildren(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  children: unknown,
+): void {
+  // console.log(['reconcileChildren'], { fiber: workInProgress, children });
 
-  // jeśli argument children jest tablicą lub obiektem, możemy rozpocząć proces rekoncyliacji
   if (Array.isArray(children) || typeof children === 'object') {
-    // zmienna pomocnicza przechowująca referencję do ostatnio utworzonego Fibera
-    let previousFiber = null;
-    // tablica dzieci, jeśli argument children nie jest tablicą, tworzymy z niego jednoelementową tablicę
+    let previousFiber: Fiber;
+    let alternate = current && current.child ? current && current.child : null;
     const elements: ReactElement[] = Array.isArray(children)
       ? children
       : [children];
 
-    // iterujemy po wszystkich dzieciach(elementy React)
     elements.forEach((element, index) => {
-      // dla każdego iterowanego dziecka tworzymy Fiber
       const tag =
-        typeof element.type === 'function' ? FunctionComponent : HostComponent;
-      const newFiber = createFiber({ tag, element, parentFiber: fiber });
+        typeof element.type === 'function'
+          ? alternate
+            ? alternate.tag
+            : IndeterminateComponent
+          : HostComponent;
+      const sameType = alternate && element && element.type == alternate.type;
+      const effectTag = sameType ? Update : element ? Placement : Deletion;
+      const newFiber = createFiberSimple({
+        tag,
+        child: undefined,
+        memoizedState: undefined,
+        pendingProps: undefined,
+        element,
+        alternate,
+        effectTag,
+        parentFiber: workInProgress,
+        stateNode:
+          alternate && alternate.stateNode ? alternate.stateNode : null,
+      });
 
-      // jeśli aktualnie iterowany jest pierwsze dziecko
       if (index === 0) {
-        // tworzymy w Fiberze dla którego odbywa się proces powiązanie w polu child
-        fiber.child = newFiber;
-        // jeśli iterujemy nie pierwszy element
+        workInProgress.child = newFiber;
       } else {
-        // tworzymy powiązanie rodzeństwa w polu sibling, w ostatnio iterowanym Fiberze
         previousFiber.sibling = newFiber;
       }
 
-      // na koniec iteracji ustawiamy ostatnio iterowany element
-      previousFiber = newFiber;
-    });
-    // jeśli argument children nie jest tablicą ani obiektem
-  } else {
-    // uznajemy że Fiber nie jest związany z żadnym dzieckiem
-    fiber.child = null;
-  }
-}
-
-/*
-funkcja rozpoczynająca pracę
-jako argument dostaje Fiber
-zwraca dziecko Fibera po wykonaniu procesu rekoncyliacji(org. reconciliation)
-*/
-function beginWork(unitOfWork: Fiber): Fiber | null {
-  console.log(['beginWork'], { unitOfWork });
-
-  // w zależności od taga Fibera
-  switch (unitOfWork.tag) {
-    // dla Fibera, który reprezentuje komponentem funkcyjny
-    case FunctionComponent: {
-      // wywołujemy typ Fibera, który jest funkcją zwracającą tablicę elementów
-      // i rozpoczynamy proces rekoncyliacji
-      if (typeof unitOfWork.type === 'function') {
-        reconcileChildren(unitOfWork, unitOfWork.type(unitOfWork.props));
+      if (alternate) {
+        alternate = alternate.sibling;
       }
 
-      break;
-    }
-    // dla Fibera związanego z głównym elementem DOM oraz zwykłym elementem DOM
-    case HostRoot:
-    case HostComponent: {
-      // i rozpoczynamy proces rekoncyliacji
-      reconcileChildren(unitOfWork, unitOfWork.props.children);
-
-      break;
-    }
+      previousFiber = newFiber;
+    });
+  } else {
+    workInProgress.child = null;
   }
-
-  // zwracamy dziecko Fibera
-  return unitOfWork.child;
 }
 
-/*
-wykonuje jednostkę pracy
-jako argument dostaje Fiber
-zwraca następną jednostkę pracy
-*/
-function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
-  console.log(['performUnitOfWork'], { unitOfWork });
+function mountWorkInProgressHook() {
+  // console.log(['mountWorkInProgressHook']);
 
-  // rozpoczynamy pracę i wynik umieszczamy w zmiennej
-  let next = beginWork(unitOfWork);
+  const hook: Hook = {
+    memoizedState: null,
+    baseState: null,
+    baseQueue: null,
+    queue: null,
+    next: null,
+  };
 
-  // funkcja beginWork zwraca null gdy dobrze do końcowego elementu, czyli takiego który nie posiada żadnych dzieci i nie jest komponentem funkcyjnym
-  if (next === null) {
-    // wtedy rozpoczynamy proces zakańczania pracy, czyli tworzenia elementów DOM
-    next = completeUnitOfWork(unitOfWork);
+  if (workInProgressHook === null) {
+    currentFiber.memoizedState = workInProgressHook = hook;
+  } else {
+    workInProgressHook = workInProgressHook.next = hook;
   }
 
-  // zwracamy następną jednostkę pracy
+  return workInProgressHook;
+}
+
+function updateWorkInProgressHook() {
+  // console.log(['updateWorkInProgressHook']);
+
+  let nextCurrentHook;
+
+  if (currentHook === null) {
+    const current = currentFiber.alternate;
+
+    if (current !== null) {
+      nextCurrentHook = current.memoizedState;
+    } else {
+      nextCurrentHook = null;
+    }
+  } else {
+    nextCurrentHook = currentHook.next;
+  }
+
+  let nextWorkInProgressHook;
+
+  if (workInProgressHook === null) {
+    nextWorkInProgressHook = currentFiber.memoizedState;
+  } else {
+    nextWorkInProgressHook = workInProgressHook.next;
+  }
+
+  if (nextWorkInProgressHook !== null) {
+    workInProgressHook = nextWorkInProgressHook;
+    currentHook = nextCurrentHook;
+  } else {
+    currentHook = nextCurrentHook;
+
+    const newHook: Hook = {
+      memoizedState: currentHook.memoizedState,
+      baseState: currentHook.baseState,
+      baseQueue: currentHook.baseQueue,
+      queue: currentHook.queue,
+      next: null,
+    };
+
+    if (workInProgressHook === null) {
+      currentFiber.memoizedState = workInProgressHook = newHook;
+    } else {
+      workInProgressHook = workInProgressHook.next = newHook;
+    }
+  }
+
+  return workInProgressHook;
+}
+
+function basicStateReducer(state: unknown, action: unknown) {
+  // console.log(['basicStateReducer'], { state, action });
+
+  return typeof action === 'function' ? action(state) : action;
+}
+
+function updateReducer(reducer: typeof basicStateReducer) {
+  // console.log(['updateReducer'], { reducer });
+
+  const hook = updateWorkInProgressHook();
+  const queue = hook.queue;
+  const current = currentHook;
+  const pendingQueue = queue.pending;
+  let baseQueue = current.baseQueue;
+
+  if (pendingQueue !== null) {
+    current.baseQueue = baseQueue = pendingQueue;
+    queue.pending = null;
+  }
+
+  if (baseQueue !== null) {
+    const first = baseQueue.next;
+    let newState = current.baseState;
+    let update = first;
+
+    do {
+      newState = reducer(newState, update.action);
+
+      update = update.next;
+    } while (update !== null && update !== first);
+
+    hook.memoizedState = newState;
+    hook.baseState = newState;
+  }
+
+  const dispatch = queue.dispatch;
+
+  return [hook.memoizedState, dispatch];
+}
+
+function updateState() {
+  // console.log(['updateState']);
+
+  return updateReducer(basicStateReducer);
+}
+
+function scheduleWork(fiber: Fiber) {
+  // console.log(['scheduleWork'], { fiber });
+
+  currentRootFiber = createFiberSimple({
+    tag: HostRoot,
+    stateNode: finishedRootFiber.stateNode,
+    element: {
+      props: finishedRootFiber.pendingProps,
+      type: undefined,
+    },
+    alternate: finishedRootFiber,
+    effectTag: undefined,
+    child: undefined,
+    memoizedState: undefined,
+    parentFiber: undefined,
+    pendingProps: undefined,
+  });
+
+  setCurrentFiber(currentRootFiber);
+  performSyncWorkOnRoot(currentRootFiber);
+}
+
+function dispatchAction(fiber: Fiber, queue: HookQueue, action: Function) {
+  // console.log(['dispatchAction'], { fiber, queue, action });
+
+  const update: HookUpdate = {
+    action: action,
+    next: null,
+  };
+  const pending = queue.pending;
+
+  if (pending === null) {
+    update.next = update;
+  } else {
+    update.next = pending.next;
+    pending.next = update;
+  }
+
+  queue.pending = update;
+
+  scheduleWork(fiber);
+}
+
+function mountState(initialState: unknown) {
+  // console.log(['mountState'], { initialState });
+
+  const hook = mountWorkInProgressHook();
+
+  if (typeof initialState === 'function') {
+    initialState = initialState();
+  }
+
+  hook.memoizedState = hook.baseState = initialState;
+
+  const queue = (hook.queue = {
+    pending: null,
+    dispatch: null,
+  } as any);
+  const dispatch = (queue.dispatch = dispatchAction.bind(
+    null,
+    currentFiber,
+    queue,
+  ));
+
+  return [hook.memoizedState, dispatch];
+}
+
+function renderWithHooks(
+  current: Fiber,
+  workInProgress: Fiber,
+  Component: Function,
+  props: Props,
+) {
+  // console.log(['renderWithHooks'], {
+  //   current,
+  //   workInProgress,
+  //   Component,
+  //   props,
+  // });
+
+  workInProgress.memoizedState = null;
+
+  if (current !== null && current.memoizedState !== null) {
+    currentDispatcher = dispatcherOnUpdate;
+  } else {
+    currentDispatcher = dispatcherOnMount;
+  }
+
+  const children = Component(props);
+
+  workInProgress = null;
+  currentHook = null;
+  workInProgressHook = null;
+
+  return children;
+}
+
+function updateFunctionComponent(
+  current: Fiber,
+  workInProgress: Fiber,
+  Component: Function,
+  nextProps: Props,
+) {
+  // console.log(['updateFunctionComponent'], {
+  //   current,
+  //   workInProgress,
+  //   Component,
+  //   nextProps,
+  // });
+
+  const nextChildren = renderWithHooks(
+    current,
+    workInProgress,
+    Component,
+    nextProps,
+  );
+
+  reconcileChildren(current, workInProgress, nextChildren);
+
+  return workInProgress.child;
+}
+
+function mountIndeterminateComponent(
+  current: Fiber,
+  workInProgress: Fiber,
+  Component: Function,
+) {
+  // console.log(['mountIndeterminateComponent'], {
+  //   current,
+  //   workInProgress,
+  //   Component,
+  // });
+
+  const children = renderWithHooks(
+    null,
+    workInProgress,
+    Component,
+    workInProgress.pendingProps,
+  );
+
+  workInProgress.tag = FunctionComponent;
+
+  reconcileChildren(current, workInProgress, children);
+
+  return workInProgress.child;
+}
+
+function beginWork(current: Fiber, unitOfWork: Fiber): Fiber | null {
+  // console.log(['beginWork'], { current, unitOfWork });
+
+  switch (unitOfWork.tag) {
+    case IndeterminateComponent: {
+      return mountIndeterminateComponent(
+        current,
+        currentFiber,
+        currentFiber.type as Function,
+      );
+    }
+    case FunctionComponent: {
+      return updateFunctionComponent(
+        current,
+        currentFiber,
+        unitOfWork.type as Function,
+        unitOfWork.pendingProps,
+      );
+    }
+    case HostRoot:
+    case HostComponent: {
+      reconcileChildren(current, unitOfWork, unitOfWork.pendingProps.children);
+
+      return unitOfWork.child;
+    }
+    default: {
+      throw Error('unknown fiber tag to begin work.');
+    }
+  }
+}
+
+function performUnitOfWork(workInProgress: Fiber) {
+  console.log(['performUnitOfWork'], { unitOfWork: workInProgress });
+
+  const current = workInProgress.alternate;
+  const next = beginWork(current, workInProgress);
+
+  if (next === null) {
+    return completeUnitOfWork(workInProgress);
+  }
+
   return next;
 }
 
-/*
-funkcja rozpoczyna pracę na root'cie, czyli Fiberem związanych z kontenerem aplikacji (<div id="root" />)
-efektem końcowym jest wyrenderowana aplikacja (DOM)
-*/
-function performSyncWorkOnRoot(): void {
-  workInProgress && console.log(['performSyncWorkOnRoot']);
+function workLoopSync() {
+  console.log(['workLoopSync']);
 
-  // jeśli jest jakaś praca do wykonania
-  if (workInProgress !== null) {
-    // tak długo jak jest praca do wykonania
-    while (workInProgress !== null) {
-      // wykonujemy pracę na aktualnie ustawionym Fiberze
-      workInProgress = performUnitOfWork(workInProgress);
-    }
-
-    // po wykonaniu całej pracy związanej z tworzeniem struktury Fiberów
-    // rozpoczynamy przegląd rekurencyjnie struktury w celu dodania wszystkich
-    // stworzonych elementów DOM do głównego kontenera aplikacji (<div id="root" />)
-    commitWork(workInProgressRoot.child);
+  while (currentFiber !== null) {
+    setCurrentFiber(performUnitOfWork(currentFiber));
   }
-
-  // rejestrujemy ponowne załadowanie funkcji sprawdzającej czy jest praca do wykonania
-  requestIdleCallback(performSyncWorkOnRoot);
 }
 
-// rozpoczynamy nieskończoną pętle, która sprawdza czy jest jakaś praca do wykonania
-// funkcja requestIdleCallback rejestruje do wykonania funkcję i wywołuje ją w momencie gdy przeglądarka jest bezczynna
-// docs: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback
-requestIdleCallback(performSyncWorkOnRoot);
+function finishSyncRender(root: Fiber) {
+  // console.log(['finishSyncRender'], { root });
 
-/*
-funkcja tworząca nowy Fiber
-jako argument otrzymuje obiekt z interfejsem
-element - element React, dla którego tworzony jest Fiber
-tag - rodzaj Fibera
-parentFiber - Fiber rodzica
-stateNode - element DOM, z którym powiązany jest tworzony Fiber
-zwraca nowy Fiber
-*/
-function createFiber({
+  commitWork(root.child);
+  finishedRootFiber = currentRootFiber;
+  currentRootFiber = null;
+}
+
+function performSyncWorkOnRoot(root: Fiber): null {
+  // console.log(['performSyncWorkOnRoot'], root);
+
+  if (currentFiber !== null) {
+    workLoopSync();
+
+    finishSyncRender(root);
+  }
+
+  return null;
+}
+
+requestIdleCallback(() => {
+  performSyncWorkOnRoot(currentRootFiber);
+});
+
+function createFiberSimple({
   element,
   tag,
   parentFiber = null,
   stateNode = null,
+  alternate = null,
+  effectTag = null,
+  memoizedState = null,
+  pendingProps = {},
+  child = null,
+}: {
+  element: ReactElement | null;
+  tag: Tag;
+  parentFiber: Fiber;
+  stateNode: HTMLElement | null;
+  alternate: Fiber | null;
+  effectTag: EffectTag;
+  memoizedState: unknown;
+  pendingProps: Props;
+  child: Fiber | null;
 }): Fiber {
-  console.log(['createFiber'], { element, tag, parentFiber, stateNode });
+  // console.log(['createFiberSimple'], { element, tag, parentFiber, stateNode });
 
   return {
+    alternate,
     tag,
     stateNode,
+    effectTag,
+    memoizedState,
+    child,
     type: element.type,
-    props: element.props,
+    pendingProps: element.props || pendingProps,
     return: parentFiber,
     sibling: null,
-    child: null,
   };
 }
 
-/*
-wykorzystywana przez babel, funkcja do zamiany JSX na elementy React
-jako argumenty dostajemy kolejno:
-- typ elementu, np. div albo App
-- propsy elementu bez dzieci
-- kolejne dzieci elementu, czyli tekst albo inny element
-
-zwraca element React, który składa się z propsów oraz typu elementu
-*/
-function createElement(type, props, ...children): ReactElement {
-  console.log(['createElement'], { type, props, children });
+function createElement(
+  type: string | Function,
+  props: Props,
+  ...children: any[]
+): ReactElement {
+  // console.log(['createElement'], { type, props, children });
 
   return {
     type,
     props: {
-      ...(props || {}), // jeśli element nie posiada żadnych propsów wykorzystywany transpiler @babel/plugin-transform-react-jsx przekazuje nulla jako drugi argument
-      children: children.length === 1 ? children[0] : children, // zawsze chcemy traktować children jako tablice, jeśli mamy tylko jedno dziecko, tworzymy z niego jednoelementową tablicę
+      ...(props || {}),
+      children: children.length === 1 ? children[0] : children,
     },
   };
 }
 
-/*
-funkcja tworząca pierwszą jednostkę pracy, która jest związana z kontenerem aplikacji
-*/
-function render(element: ReactElement, container: HTMLElement) {
-  console.log(['render'], { element, container });
-  // tworzymy Fiber związany z kontenerem aplikacji i zapisujemy referencję
-  workInProgressRoot = createFiber({
+function render(children: ReactElement, container: HTMLElement) {
+  // console.log(['render'], { children, container });
+
+  currentRootFiber = createFiberSimple({
+    child: undefined,
+    effectTag: undefined,
+    memoizedState: undefined,
+    parentFiber: undefined,
+    pendingProps: undefined,
     tag: HostRoot,
     stateNode: container,
     element: {
+      type: undefined,
       props: {
-        children: [element],
+        children,
       },
     },
+    alternate: finishedRootFiber,
   });
-  // ustawiamy stworzony Fiber jako aktualna praca do wykonania
-  // co spowoduje że pętla aplikacji rozpocznie prace
-  workInProgress = workInProgressRoot;
+  setCurrentFiber(currentRootFiber);
 }
 
-/*
-api biblioteki
-*/
+function useState<T>(initialState: T) {
+  return currentDispatcher.useState(initialState);
+}
+
 export default {
+  useState,
   createElement,
   render,
 };

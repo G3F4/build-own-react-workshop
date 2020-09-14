@@ -54,7 +54,7 @@ const IndeterminateComponent = 2;
 const HostRoot = 3;
 const HostComponent = 5;
 const HostText = 6;
-let currentlyRenderingFiber$1 = null;
+let currentlyRenderingFiber = null;
 const ReactCurrentOwner = {
   current: null,
 };
@@ -63,15 +63,9 @@ const ReactCurrentDispatcher = {
 };
 let currentHook = null;
 let workInProgressHook = null;
-let HooksDispatcherOnMountInDEV = null;
-let HooksDispatcherOnUpdateInDEV = null;
-const InvalidNestedHooksDispatcherOnMountInDEV = null;
-const InvalidNestedHooksDispatcherOnUpdateInDEV = null;
-let currentHookNameInDev = null;
+let HooksDispatcherOnMount = null;
+let HooksDispatcherOnUpdate = null;
 const DiscreteEvent = 0;
-let hasForceUpdate = false;
-let currentlyProcessingQueue;
-let isRendering = false;
 const ContextOnlyDispatcher = {
   useState: null,
 };
@@ -86,14 +80,12 @@ const REACT_ELEMENT_TYPE = Symbol.for('react.element');
 const PossiblyWeakMap = typeof WeakMap === 'function' ? WeakMap : Map; // prettier-ignore
 const elementListenerMap = new PossiblyWeakMap();
 let getFiberCurrentPropsFromNode = null;
-let getInstanceFromNode = null;
 let getNodeFromInstance = null;
 const namesToPlugins = {};
 let eventPluginOrder = null;
 const plugins = [];
 const eventNameDispatchConfigs = {};
 let eventsEnabled = null;
-let selectionInformation = null;
 const valueStack = [];
 const fiberStack = [];
 let index = -1;
@@ -485,11 +477,9 @@ topLevelFunctionsRegister.push('processUpdateQueue');
 
 function processUpdateQueue(workInProgress, props, instance) {
   logFuncUsage(['processUpdateQueue'], { workInProgress, props, instance });
+  console.log(['processUpdateQueue'], { workInProgress, props, instance });
 
   const queue = workInProgress.updateQueue;
-
-  hasForceUpdate = false;
-
   let baseQueue = queue.baseQueue;
   let pendingQueue = queue.shared.pending;
 
@@ -542,10 +532,6 @@ function processUpdateQueue(workInProgress, props, instance) {
     queue.baseState = newBaseState;
     queue.baseQueue = newBaseQueueLast;
     workInProgress.memoizedState = newState;
-  }
-
-  {
-    currentlyProcessingQueue = null;
   }
 }
 
@@ -606,7 +592,7 @@ function mountWorkInProgressHook() {
   };
 
   if (workInProgressHook === null) {
-    currentlyRenderingFiber$1.memoizedState = workInProgressHook = hook;
+    currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
   } else {
     workInProgressHook = workInProgressHook.next = hook;
   }
@@ -643,7 +629,7 @@ function dispatchAction(fiber, queue, action) {
 
     {
       prevDispatcher = ReactCurrentDispatcher.current;
-      ReactCurrentDispatcher.current = InvalidNestedHooksDispatcherOnUpdateInDEV;
+      // ReactCurrentDispatcher.current = InvalidNestedHooksDispatcherOnUpdateInDEV;
     }
 
     ReactCurrentDispatcher.current = prevDispatcher;
@@ -673,7 +659,7 @@ function mountState(initialState) {
   });
   const dispatch = (queue.dispatch = dispatchAction.bind(
     null,
-    currentlyRenderingFiber$1,
+    currentlyRenderingFiber,
     queue,
   ));
 
@@ -681,15 +667,12 @@ function mountState(initialState) {
 }
 
 {
-  topLevelFunctionsRegister.push('HooksDispatcherOnMountInDEV.useState');
-  HooksDispatcherOnMountInDEV = {
+  topLevelFunctionsRegister.push('HooksDispatcherOnMount.useState');
+  HooksDispatcherOnMount = {
     useState: function (initialState) {
-      logFuncUsage(['HooksDispatcherOnMountInDEV.useState'], { initialState });
-      currentHookNameInDev = 'useState';
+      logFuncUsage(['HooksDispatcherOnMount.useState'], { initialState });
 
       const prevDispatcher = ReactCurrentDispatcher.current;
-
-      ReactCurrentDispatcher.current = InvalidNestedHooksDispatcherOnMountInDEV;
 
       try {
         return mountState(initialState);
@@ -698,18 +681,15 @@ function mountState(initialState) {
       }
     },
   };
-  topLevelFunctionsRegister.push('HooksDispatcherOnUpdateInDEV.useState');
-  HooksDispatcherOnUpdateInDEV = {
+  topLevelFunctionsRegister.push('HooksDispatcherOnUpdate.useState');
+  HooksDispatcherOnUpdate = {
     useState: function (initialState) {
-      logFuncUsage(['HooksDispatcherOnUpdateInDEV.useState'], { initialState });
-      currentHookNameInDev = 'useState';
+      logFuncUsage(['HooksDispatcherOnUpdate.useState'], { initialState });
 
       const prevDispatcher = ReactCurrentDispatcher.current;
 
-      ReactCurrentDispatcher.current = InvalidNestedHooksDispatcherOnUpdateInDEV;
-
       try {
-        return updateState(initialState);
+        return updateState();
       } finally {
         ReactCurrentDispatcher.current = prevDispatcher;
       }
@@ -725,7 +705,7 @@ function updateWorkInProgressHook() {
   let nextCurrentHook;
 
   if (currentHook === null) {
-    const current = currentlyRenderingFiber$1.alternate;
+    const current = currentlyRenderingFiber.alternate;
 
     if (current !== null) {
       nextCurrentHook = current.memoizedState;
@@ -739,7 +719,7 @@ function updateWorkInProgressHook() {
   let nextWorkInProgressHook;
 
   if (workInProgressHook === null) {
-    nextWorkInProgressHook = currentlyRenderingFiber$1.memoizedState;
+    nextWorkInProgressHook = currentlyRenderingFiber.memoizedState;
   } else {
     nextWorkInProgressHook = workInProgressHook.next;
   }
@@ -759,7 +739,7 @@ function updateWorkInProgressHook() {
     };
 
     if (workInProgressHook === null) {
-      currentlyRenderingFiber$1.memoizedState = workInProgressHook = newHook;
+      currentlyRenderingFiber.memoizedState = workInProgressHook = newHook;
     } else {
       workInProgressHook = workInProgressHook.next = newHook;
     }
@@ -833,30 +813,24 @@ function renderWithHooks(current, workInProgress, Component, props, secondArg) {
     props,
     secondArg,
   });
-  currentlyRenderingFiber$1 = workInProgress;
+  currentlyRenderingFiber = workInProgress;
 
   workInProgress.memoizedState = null;
   workInProgress.updateQueue = null;
 
-  {
-    if (current !== null && current.memoizedState !== null) {
-      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV;
-    } else {
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV;
-    }
+  if (current !== null && current.memoizedState !== null) {
+    ReactCurrentDispatcher.current = HooksDispatcherOnUpdate;
+  } else {
+    ReactCurrentDispatcher.current = HooksDispatcherOnMount;
   }
 
   const children = Component(props, secondArg);
 
   ReactCurrentDispatcher.current = ContextOnlyDispatcher;
 
-  currentlyRenderingFiber$1 = null;
+  currentlyRenderingFiber = null;
   currentHook = null;
   workInProgressHook = null;
-
-  {
-    currentHookNameInDev = null;
-  }
 
   return children;
 }
@@ -995,7 +969,6 @@ function createInstance(
   hostContext,
   internalInstanceHandle,
 ) {
-  console.log(['createInstance'], type)
   logFuncUsage(['createInstance'], {
     type,
     props,
@@ -2449,7 +2422,6 @@ topLevelFunctionsRegister.push('completeUnitOfWork');
 
 function completeUnitOfWork(unitOfWork) {
   logFuncUsage(['completeUnitOfWork'], { unitOfWork });
-  console.log(['completeUnitOfWork'], { unitOfWork });
   workInProgress = unitOfWork;
 
   do {
@@ -2504,7 +2476,6 @@ topLevelFunctionsRegister.push('performUnitOfWork');
 
 function performUnitOfWork(unitOfWork) {
   logFuncUsage(['performUnitOfWork'], performUnitOfWorkCounter, { unitOfWork });
-  console.log(['performUnitOfWork'], performUnitOfWorkCounter, { unitOfWork });
   performUnitOfWorkCounter++;
 
   let next;
@@ -2588,7 +2559,6 @@ topLevelFunctionsRegister.push('prepareForCommit');
 function prepareForCommit() {
   logFuncUsage(['prepareForCommit']);
   eventsEnabled = isEnabled();
-  selectionInformation = getSelectionInformation();
   setEnabled(false);
 }
 
@@ -2598,8 +2568,6 @@ function resetAfterCommit() {
   logFuncUsage(['resetAfterCommit']);
   setEnabled(eventsEnabled);
   eventsEnabled = null;
-
-  selectionInformation = null;
 }
 
 topLevelFunctionsRegister.push('isHostParent');
@@ -2789,7 +2757,6 @@ function dangerousStyleValue(name, value, isCustomProperty) {
 topLevelFunctionsRegister.push('setValueForStyles');
 
 function setValueForStyles(node, styles) {
-  console.log(['setValueForStyles'], { node, styles });
   logFuncUsage(['setValueForStyles'], { node, styles });
 
   const style = node.style;
@@ -3082,7 +3049,6 @@ function unmountHostComponents(finishedRoot, current) {
 topLevelFunctionsRegister.push('commitMutationEffects');
 
 function commitMutationEffects(root) {
-  console.log(['commitMutationEffects'], { root });
   logFuncUsage(['commitMutationEffects'], { root });
 
   while (nextEffect !== null) {
@@ -3252,7 +3218,6 @@ topLevelFunctionsRegister.push('updateContainer');
 
 function updateContainer(element, container, parentComponent) {
   logFuncUsage(['updateContainer'], { element, container, parentComponent });
-  console.log(['updateContainer'], { element, container, parentComponent });
 
   const update = createUpdate();
 
@@ -3267,11 +3232,9 @@ function updateContainer(element, container, parentComponent) {
 topLevelFunctionsRegister.push('render');
 
 function render(element, container) {
-  console.log(['render'], { element, container });
   logFuncUsage(['render'], { element, container });
 
   const fiberRoot = createFiberRoot(container);
-  console.log(['render.fiberRoot'], fiberRoot);
 
   updateContainer(element, fiberRoot, null);
 
@@ -3600,7 +3563,6 @@ function setComponentTree(
     getNodeFromInstanceImpl,
   });
   getFiberCurrentPropsFromNode = getFiberCurrentPropsFromNodeImpl;
-  getInstanceFromNode = null;
   getNodeFromInstance = getNodeFromInstanceImpl;
 }
 
