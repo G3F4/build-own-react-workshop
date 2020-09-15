@@ -739,27 +739,50 @@ function workLoopSync() {
 //   currentRootFiber = null;
 // }
 
-finishWorkButton.addEventListener('click', () => {
-  setCurrentFiber(currentRootFiber.child);
-  commitWorkButton.addEventListener(
-    'click',
-    () => {
-      commitWork(finishedRootFiber.child);
-    },
-    { once: true },
-  );
-  finishedRootFiber = currentRootFiber;
-  currentRootFiber = null;
-  finishWorkButton.disabled = true;
-});
+finishWorkButton.addEventListener(
+  'click',
+  () => {
+    setCurrentFiber(currentRootFiber.child);
+    commitWorkButton.addEventListener(
+      'click',
+      () => {
+        commitWork(finishedRootFiber.child);
+      },
+      { once: true },
+    );
+    finishedRootFiber = currentRootFiber;
+    currentRootFiber = null;
+    finishWorkButton.disabled = true;
+  },
+  { once: true },
+);
 
 function performSyncWorkOnRoot(root: Fiber): null {
   console.log(['performSyncWorkOnRoot'], root);
+  workLoopButton.disabled = false;
+  finishWorkButton.disabled = false;
+  commitWorkButton.disabled = false;
 
   if (currentFiber !== null) {
     workLoopSync();
 
-    finishSyncRender();
+    finishWorkButton.addEventListener(
+      'click',
+      () => {
+        setCurrentFiber(currentRootFiber.child);
+        commitWorkButton.addEventListener(
+          'click',
+          () => {
+            commitWork(finishedRootFiber.child);
+          },
+          { once: true },
+        );
+        finishedRootFiber = currentRootFiber;
+        currentRootFiber = null;
+        finishWorkButton.disabled = true;
+      },
+      { once: true },
+    );
   }
 
   return null;
