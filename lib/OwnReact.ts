@@ -75,12 +75,20 @@ const renderButton: HTMLButtonElement = document.querySelector(
 const commitWorkButton: HTMLButtonElement = document.querySelector(
   '[value="COMMIT_WORK"]',
 );
+
+commitWorkButton.disabled = true;
+
 const workLoopButton: HTMLButtonElement = document.querySelector(
   '[value="WORK_LOOP"]',
 );
+
+workLoopButton.disabled = true;
+
 const finishWorkButton: HTMLButtonElement = document.querySelector(
   '[value="FINISH_WORK"]',
 );
+
+finishWorkButton.disabled = true;
 
 workLoopButton.addEventListener('click', () => {
   workLoopSync();
@@ -791,6 +799,7 @@ function workLoopSync() {
 
     if (nextWork === null) {
       workLoopButton.disabled = true;
+      finishWorkButton.disabled = false;
     }
   }
 }
@@ -817,6 +826,7 @@ finishWorkButton.addEventListener(
     finishedRootFiber = currentRootFiber;
     currentRootFiber = null;
     finishWorkButton.disabled = true;
+    commitWorkButton.disabled = false;
   },
   { once: true },
 );
@@ -824,8 +834,6 @@ finishWorkButton.addEventListener(
 function performSyncWorkOnRoot(root: Fiber): null {
   console.log(['performSyncWorkOnRoot'], root);
   workLoopButton.disabled = false;
-  finishWorkButton.disabled = false;
-  commitWorkButton.disabled = false;
 
   if (currentFiber !== null) {
     workLoopSync();
@@ -844,6 +852,7 @@ function performSyncWorkOnRoot(root: Fiber): null {
         finishedRootFiber = currentRootFiber;
         currentRootFiber = null;
         finishWorkButton.disabled = true;
+        commitWorkButton.disabled = false;
       },
       { once: true },
     );
@@ -934,6 +943,7 @@ function render(children: ReactElement, container: HTMLElement) {
       });
       setCurrentFiber(currentRootFiber);
       renderButton.disabled = true;
+      workLoopButton.disabled = false;
     },
     { once: true },
   );
