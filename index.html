@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>How React Fibers works</title><style>#layout {
+            display: flex;
+        }
+        #root {
+            padding: 10px;
+            border: solid;
+            width: 400px;
+            height: 222px;
+        }
+        #elementsTree {
+            border: solid;
+            width: 420px;
+            height: 220px;
+        }
+        #rootWrapper h2 {
+            margin-top: 0;
+        }
+        #fiberView {
+            padding: 10px;
+        }
+        #fiberView menu {
+            margin-left: 185px;
+        }
+        .frameHeader {
+            text-align: center;
+        }</style></head><body><div id="layout"><div><h2 class="frameHeader">APPLICATION FRAME</h2><div id="root"></div><h2 class="frameHeader">ELEMENTS TREE (FAKE JSX)</h2><div id="elementsTree"></div></div><div id="fiberViewWrapper"><div id="fiberView"><main></main><menu><button value="RENDER">Render</button> <button value="WORK_LOOP">Work loop</button> <button value="FINISH_WORK">Finish work</button> <button value="COMMIT_WORK">Commit work</button></menu></div></div></div><script src="bundle.js"></script></body></html>
