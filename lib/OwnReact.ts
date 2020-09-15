@@ -263,17 +263,21 @@ function drawCurrentFiberInfo(fiber: Fiber) {
     .font({ fill: '#000', family: 'Inconsolata', size: 30 });
 
   const propsString = Object.entries(fiber.pendingProps)
-    .filter(([key, value]) => {
-      if (key === 'children') {
-        return typeof value === 'string';
-      }
-
-      return true;
-    })
+    // .filter(([key, value]) => {
+    //   if (key === 'children') {
+    //     return typeof value === 'string';
+    //   }
+    //
+    //   return true;
+    // })
     .map(([key, value]) => {
       const ellipsisFrom = 30;
       let formattedValue =
         typeof value === 'function' ? value.name : JSON.stringify(value);
+
+      if (key === 'children' && Array.isArray(value)) {
+        formattedValue = value.reduce((acc, { type }) => `${acc}, ${type}`, '');
+      }
 
       if (formattedValue.length > ellipsisFrom) {
         formattedValue = formattedValue.slice(0, ellipsisFrom) + '...';
@@ -333,13 +337,25 @@ function drawFiberLinks(
         cx + 2 * drawUnit - childOrder * fiberWidth,
         cy - 6 * drawUnit,
       )
-      .stroke({ color: 'green', width: 8, linecap: 'round' });
+      .stroke({ color: 'green', width: 4, linecap: 'round' })
+      .marker('start', 1.5, 1.5, (add) => {
+        add.circle(1.5).fill('black').rotate(90);
+      })
+      .marker('end', 2, 2, (add) => {
+        add.circle(2).fill('black');
+      });
   }
 
   if (fiber.child) {
     fiberPrinter
       .line(cx, cy + 4 * drawUnit, cx, cy + 6 * drawUnit)
-      .stroke({ color: 'yellow', width: 8, linecap: 'round' });
+      .stroke({ color: 'yellow', width: 4, linecap: 'round' })
+      .marker('start', 1.5, 1.5, (add) => {
+        add.circle(1.5).fill('black').rotate(90);
+      })
+      .marker('end', 2, 2, (add) => {
+        add.circle(2).fill('black');
+      });
   }
 
   if (fiber.sibling) {
@@ -350,7 +366,13 @@ function drawFiberLinks(
         cx + 9 * drawUnit,
         cy + 2 * drawUnit,
       )
-      .stroke({ color: 'orange', width: 8, linecap: 'round' });
+      .stroke({ color: 'orange', width: 4, linecap: 'round' })
+      .marker('start', 1.5, 1.5, (add) => {
+        add.circle(1.5).fill('black');
+      })
+      .marker('end', 2, 2, (add) => {
+        add.circle(2).fill('black').rotate(90);
+      });
   }
 }
 
