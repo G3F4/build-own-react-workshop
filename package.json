@@ -5,10 +5,14 @@
     "dev:min": "webpack-dev-server --config webpack.config.min.js --open --mode development",
     "dev:orig": "webpack-dev-server --config webpack.config.orig.js --open --mode development",
     "dev:didact": "webpack-dev-server --config webpack.config.didact.js --open --mode development",
+    "build:dev": "webpack --mode development",
+    "build:prod": "webpack --config webpack.config.prod.js",
     "start": "http-server dist -c-1",
     "build": "webpack",
+    "deploy": "gh-pages -d dist",
     "lint": "eslint ./src ./lib"
   },
+  "homepage": "https://g3f4.github.io/build-own-react-workshop/",
   "dependencies": {
     "@babel/core": "7.9.0",
     "@babel/plugin-transform-react-jsx": "7.9.4",
@@ -26,6 +30,7 @@
     "eslint-plugin-import": "2.20.2",
     "eslint-plugin-prettier": "3.1.3",
     "eslint-plugin-react": "7.19.0",
+    "gh-pages": "^3.1.0",
     "html-webpack-plugin": "4.2.1",
     "http-server": "0.12.3",
     "prettier": "2.0.5",
