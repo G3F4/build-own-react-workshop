@@ -285,11 +285,10 @@ function updateProperties(fiber: Fiber): void {
   });
 }
 
-function commitWork(fiber: Fiber): void {
+function commitWork(fiber: Fiber | null): void {
   console.log(['commitWork'], { fiber });
-  setCurrentFiber(fiber);
 
-  if (fiber.stateNode != null) {
+  if (fiber && fiber.stateNode != null) {
     let closestParentWithNode = fiber.return;
 
     while (!closestParentWithNode.stateNode) {
@@ -303,28 +302,59 @@ function commitWork(fiber: Fiber): void {
     updateProperties(fiber);
   }
 
-  if (fiber.child) {
-    commitWorkButton.addEventListener(
-      'click',
-      () => {
-        commitWork(fiber.child);
-      },
-      { once: true },
-    );
-  }
-
-  if (fiber.sibling) {
-    commitWorkButton.addEventListener(
-      'click',
-      () => {
-        commitWork(fiber.sibling);
-      },
-      { once: true },
-    );
-  }
+  // if (fiber.child && fiber.sibling === null) {
+  //   commitWorkButton.addEventListener(
+  //     'click',
+  //     () => {
+  //       commitWork(fiber.child);
+  //     },
+  //     { once: true },
+  //   );
+  // }
+  //
+  // if (fiber.sibling) {
+  //   commitWorkButton.addEventListener(
+  //     'click',
+  //     () => {
+  //       commitWork(fiber.sibling);
+  //     },
+  //     { once: true },
+  //   );
+  // }
 
   // fiber.child && commitWork(fiber.child);
   // fiber.sibling && commitWork(fiber.sibling);
+
+  let nextFiber: Fiber;
+
+  if (fiber.child) {
+    nextFiber = fiber.child;
+  } else if (fiber.sibling) {
+    nextFiber = fiber.sibling;
+  } else if (fiber.child === null && fiber.sibling === null) {
+    let fiberParentSibling = fiber.return;
+
+    while (fiberParentSibling && fiberParentSibling.sibling === null) {
+      fiberParentSibling = fiberParentSibling.return;
+    }
+
+    nextFiber = fiberParentSibling ? fiberParentSibling.sibling : null;
+  }
+
+  setCurrentFiber(nextFiber);
+
+  if (nextFiber) {
+    commitWorkButton.addEventListener(
+      'click',
+      () => {
+        commitWork(nextFiber);
+      },
+      { once: true },
+    );
+  } else {
+    setCurrentFiber(null);
+    commitWorkButton.disabled = true;
+  }
 }
 
 function reconcileChildren(
@@ -701,16 +731,23 @@ function workLoopSync() {
   }
 }
 
-function finishSyncRender() {
-  console.log(['finishSyncRender']);
-
-  commitWork(currentRootFiber.child);
-  finishedRootFiber = currentRootFiber;
-  currentRootFiber = null;
-}
+// function finishSyncRender() {
+//   console.log(['finishSyncRender']);
+//
+//   commitWork(currentRootFiber.child);
+//   finishedRootFiber = currentRootFiber;
+//   currentRootFiber = null;
+// }
 
 finishWorkButton.addEventListener('click', () => {
-  commitWork(currentRootFiber.child);
+  setCurrentFiber(currentRootFiber.child);
+  commitWorkButton.addEventListener(
+    'click',
+    () => {
+      commitWork(finishedRootFiber.child);
+    },
+    { once: true },
+  );
   finishedRootFiber = currentRootFiber;
   currentRootFiber = null;
   finishWorkButton.disabled = true;
