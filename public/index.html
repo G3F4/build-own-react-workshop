@@ -10,13 +10,17 @@
         #root {
             padding: 10px;
             border: solid;
+            width: 400px;
+            height: 222px;
         }
-        #rootWrapper {
-            position: absolute;
-            right: 0;
+        #rootWrapper h2 {
+            margin-top: 0;
         }
         #fiberView {
             padding: 10px;
+        }
+        #fiberView menu {
+            margin-left: 185px;
         }
         #fiberViewWrapper {
         }
@@ -24,13 +28,13 @@
 </head>
 <body>
     <div id="layout">
-        <div id="rootWrapper">
+        <div>
             <h2>APPLICATION FRAME</h2>
             <div id="root"></div>
         </div>
         <div id="fiberViewWrapper">
-            <h2>FIBER CONTROLS FRAME</h2>
             <div id="fiberView">
+                <main></main>
                 <menu>
                     <button value="RENDER">Render</button>
                     <button value="WORK_LOOP">Work loop</button>
