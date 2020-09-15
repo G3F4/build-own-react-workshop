@@ -245,6 +245,50 @@ function drawFiber(
     .opacity(opacity);
 }
 
+function drawCurrentFiberInfo(fiber: Fiber) {
+  const cx = 350;
+  const cy = 110;
+  const fiberLabel = getFiberLabel(fiber);
+
+  fiberPrinter
+    .rect(358, 208)
+    .attr({ fill: 'black' })
+    .cx(cx - 1)
+    .cy(cy - 1);
+  fiberPrinter.rect(350, 200).attr({ fill: 'green' }).cx(cx).cy(cy);
+
+  fiberPrinter
+    .text(fiberLabel)
+    .move(cx - 160, cy - 100)
+    .font({ fill: '#000', family: 'Inconsolata', size: 30 });
+
+  const propsString = Object.entries(fiber.pendingProps)
+    .filter(([key, value]) => {
+      if (key === 'children') {
+        return typeof value === 'string';
+      }
+
+      return true;
+    })
+    .map(([key, value]) => {
+      const ellipsisFrom = 30;
+      let formattedValue =
+        typeof value === 'function' ? value.name : JSON.stringify(value);
+
+      if (formattedValue.length > ellipsisFrom) {
+        formattedValue = formattedValue.slice(0, ellipsisFrom) + '...';
+      }
+
+      return `${key}: ${formattedValue}`;
+    })
+    .join('\n');
+
+  fiberPrinter
+    .text(propsString)
+    .move(cx - 160, cy - 50)
+    .font({ fill: '#000', family: 'Inconsolata', size: 20 });
+}
+
 function drawElement(
   fiber: Fiber,
   path: { childDepth: number; siblingsDepth: number },
@@ -355,6 +399,7 @@ function setCurrentFiber(fiber: Fiber) {
   fiberPrinter.clear();
   elementsTreePrinter.clear();
 
+  fiber && drawCurrentFiberInfo(fiber);
   drawAlternateFibers();
   drawCurrentFibers();
   drawElementsTree();
