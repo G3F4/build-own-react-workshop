@@ -68,7 +68,8 @@ let currentDispatcher:
   | null = null;
 
 import { SVG } from '@svgdotjs/svg.js';
-const draw = SVG().addTo('#fiberView main').size(600, 540);
+const fiberPrinter = SVG().addTo('#fiberView main').size(600, 540);
+const elementsTreePrinter = SVG().addTo('#elementsTree').size(600, 540);
 const renderButton: HTMLButtonElement = document.querySelector(
   '[value="RENDER"]',
 );
@@ -155,9 +156,45 @@ function traverseFiber(
   }
 }
 
+let traverseFiberElementsCounter = 0;
+
+function traverseFiberElements(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+  callback: (
+    fiber: Fiber,
+    path: { childDepth: number; siblingsDepth: number },
+  ) => void,
+) {
+  console.log(['traverseFiberElements'], fiber);
+
+  callback(fiber, path);
+  traverseFiberElementsCounter++;
+
+  if (fiber.child) {
+    traverseFiberElements(
+      fiber.child,
+      { ...path, childDepth: path.childDepth + 1 },
+      callback,
+    );
+  }
+
+  if (fiber.sibling) {
+    traverseFiberElements(
+      fiber.sibling,
+      {
+        ...path,
+        siblingsDepth: path.siblingsDepth + 1,
+      },
+      callback,
+    );
+  }
+}
+
 const drawUnit = 9;
 const fiberWidth = 15 * drawUnit;
 const fiberHeight = 10 * drawUnit;
+const jsxLineHeight = 20;
 
 function drawFiber(
   fiber: Fiber,
@@ -170,7 +207,7 @@ function drawFiber(
   const drawingCurrent = fiber === currentFiber;
 
   if (drawingCurrent) {
-    draw
+    fiberPrinter
       .rect(fiberWidth, fiberHeight)
       .attr({ fill: 'black' })
       .cx(cx)
@@ -178,14 +215,14 @@ function drawFiber(
       .opacity(opacity);
   }
 
-  draw
+  fiberPrinter
     .rect(fiberWidth - drawUnit, fiberHeight - drawUnit)
     .attr({ fill: '#f06' })
     .cx(cx)
     .cy(cy)
     .opacity(opacity);
 
-  draw
+  fiberPrinter
     .text(fiberLabel)
     .move(cx - 6 * drawUnit, cy - 3 * drawUnit)
     .font({ fill: '#000', family: 'Inconsolata' })
@@ -201,11 +238,39 @@ function drawFiber(
     })
     .join('\n');
 
-  draw
+  fiberPrinter
     .text(propsString)
     .move(cx - 6 * drawUnit, cy)
     .font({ fill: '#000', family: 'Inconsolata', size: 10 })
     .opacity(opacity);
+}
+
+function drawElement(
+  fiber: Fiber,
+  path: { childDepth: number; siblingsDepth: number },
+) {
+  const elementName = getFiberLabel(fiber);
+  const drawingCurrent = fiber === currentFiber;
+  const cx = drawUnit * 3 * path.childDepth + fiberWidth / 2;
+  const cy = jsxLineHeight * traverseFiberElementsCounter - drawUnit / 2;
+  const x = cx - 6 * drawUnit + path.childDepth * drawUnit;
+  const y = cy;
+
+  if (drawingCurrent) {
+    elementsTreePrinter
+      .line(
+        x,
+        y + jsxLineHeight + drawUnit / 3,
+        x + drawUnit * 6,
+        y + jsxLineHeight + drawUnit / 3,
+      )
+      .stroke({ color: 'green', width: drawUnit / 2 });
+  }
+
+  elementsTreePrinter
+    .text(`<${elementName}>`)
+    .move(x, y)
+    .font({ fill: '#000', family: 'Inconsolata', size: 20 });
 }
 
 function drawFiberLinks(
@@ -217,7 +282,7 @@ function drawFiberLinks(
   const childOrder = getChildOrder(fiber);
 
   if (fiber.return) {
-    draw
+    fiberPrinter
       .line(
         cx + 2 * drawUnit,
         cy - 4 * drawUnit,
@@ -228,13 +293,13 @@ function drawFiberLinks(
   }
 
   if (fiber.child) {
-    draw
+    fiberPrinter
       .line(cx, cy + 4 * drawUnit, cx, cy + 6 * drawUnit)
       .stroke({ color: 'yellow', width: 8, linecap: 'round' });
   }
 
   if (fiber.sibling) {
-    draw
+    fiberPrinter
       .line(
         cx + 6 * drawUnit,
         cy + 2 * drawUnit,
@@ -258,6 +323,15 @@ function drawCurrentFibers() {
   );
 }
 
+function drawElementsTree() {
+  traverseFiberElementsCounter = 0;
+  traverseFiberElements(
+    currentRootFiber || finishedRootFiber,
+    { childDepth: 0, siblingsDepth: 0 },
+    drawElement,
+  );
+}
+
 function drawAlternateFibers() {
   if (finishedRootFiber && finishedRootFiber.alternate) {
     const rootFiberAlternate = finishedRootFiber.alternate;
@@ -278,10 +352,12 @@ function drawAlternateFibers() {
 function setCurrentFiber(fiber: Fiber) {
   // console.log(['setCurrentFiber'], fiber);
   currentFiber = fiber;
-  draw.clear();
+  fiberPrinter.clear();
+  elementsTreePrinter.clear();
 
   drawAlternateFibers();
   drawCurrentFibers();
+  drawElementsTree();
 }
 
 const dispatcherOnMount = {
