@@ -67,7 +67,7 @@ let currentDispatcher:
   | typeof dispatcherOnUpdate
   | null = null;
 
-import { SVG } from '@svgdotjs/svg.js';
+import { Marker, SVG } from '@svgdotjs/svg.js';
 const fiberPrinter = SVG().addTo('#fiberView main').size(600, 540);
 const elementsTreePrinter = SVG().addTo('#elementsTree').size(600, 540);
 const renderButton: HTMLButtonElement = document.querySelector(
@@ -224,7 +224,7 @@ function drawFiber(
 
   fiberPrinter
     .text(fiberLabel)
-    .move(cx - 6 * drawUnit, cy - 3 * drawUnit)
+    .move(cx - 6 * drawUnit, cy - 4 * drawUnit)
     .font({ fill: '#000', family: 'Inconsolata' })
     .opacity(opacity);
 
@@ -328,6 +328,20 @@ function drawFiberLinks(
   const cx = fiberWidth * path.siblingsDepth + fiberWidth / 2;
   const cy = fiberHeight * path.childDepth + fiberHeight / 2;
   const childOrder = getChildOrder(fiber);
+  const arrowSize = 5;
+
+  function getArrowMarker(color: string) {
+    return fiberPrinter.marker(arrowSize, arrowSize, function (add) {
+      add
+        .polyline([
+          [0, arrowSize / 2],
+          [(arrowSize * 2) / 2, arrowSize],
+          [(arrowSize * 2) / 2, 0],
+        ])
+        .rotate(180)
+        .fill(color);
+    });
+  }
 
   if (fiber.return) {
     fiberPrinter
@@ -338,24 +352,14 @@ function drawFiberLinks(
         cy - 6 * drawUnit,
       )
       .stroke({ color: 'green', width: 4, linecap: 'round' })
-      .marker('start', 1.5, 1.5, (add) => {
-        add.circle(1.5).fill('black').rotate(90);
-      })
-      .marker('end', 2, 2, (add) => {
-        add.circle(2).fill('black');
-      });
+      .marker('end', getArrowMarker('green'));
   }
 
   if (fiber.child) {
     fiberPrinter
       .line(cx, cy + 4 * drawUnit, cx, cy + 6 * drawUnit)
-      .stroke({ color: 'yellow', width: 4, linecap: 'round' })
-      .marker('start', 1.5, 1.5, (add) => {
-        add.circle(1.5).fill('black').rotate(90);
-      })
-      .marker('end', 2, 2, (add) => {
-        add.circle(2).fill('black');
-      });
+      .stroke({ color: '#f6cd61', width: 4, linecap: 'round' })
+      .marker('end', getArrowMarker('#f6cd61'));
   }
 
   if (fiber.sibling) {
@@ -366,13 +370,8 @@ function drawFiberLinks(
         cx + 9 * drawUnit,
         cy + 2 * drawUnit,
       )
-      .stroke({ color: 'orange', width: 4, linecap: 'round' })
-      .marker('start', 1.5, 1.5, (add) => {
-        add.circle(1.5).fill('black');
-      })
-      .marker('end', 2, 2, (add) => {
-        add.circle(2).fill('black').rotate(90);
-      });
+      .stroke({ color: '#fe8a71', width: 4, linecap: 'round' })
+      .marker('end', getArrowMarker('#fe8a71'));
   }
 }
 
