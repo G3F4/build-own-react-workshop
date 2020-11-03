@@ -9,6 +9,7 @@
     "build:prod": "webpack --config webpack.config.prod.js",
     "start": "http-server dist -c-1",
     "build": "webpack",
+    "predeploy": "yarn build",
     "deploy": "gh-pages -d dist",
     "lint": "eslint ./src ./lib"
   },
