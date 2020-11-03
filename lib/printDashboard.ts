@@ -300,13 +300,14 @@ function drawFiberLinks(
   }
 
   if (fiber.return) {
+    const x1 = cx + 2 * drawUnit;
+    const y1 = cy - 4 * drawUnit;
+    const x2 =
+      cx + 2 * drawUnit - childOrder * fiberWidth + childOrder * drawUnit;
+    const y2 = cy - 6 * drawUnit;
+
     fiberPrinter
-      .line(
-        cx + 2 * drawUnit,
-        cy - 4 * drawUnit,
-        cx + 2 * drawUnit - childOrder * fiberWidth,
-        cy - 6 * drawUnit,
-      )
+      .line(x1, y1, x2, y2)
       .stroke({ color: colorPalette.returnArrow, width: 4, linecap: 'round' })
       .marker('end', getArrowMarker(colorPalette.returnArrow));
   }
