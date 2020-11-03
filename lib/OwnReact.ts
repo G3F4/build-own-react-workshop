@@ -398,16 +398,16 @@ function drawElementsTree() {
 }
 
 function drawAlternateFibers() {
-  if (finishedRootFiber && finishedRootFiber.alternate) {
-    const rootFiberAlternate = finishedRootFiber.alternate;
+  console.log(['drawAlternateFibers'], { finishedRootFiber });
 
+  if (finishedRootFiber) {
     traverseFiber(
-      rootFiberAlternate,
+      finishedRootFiber,
       { childDepth: 0, siblingsDepth: 0 },
       (fiber, path) => drawFiber(fiber, path, 0.5),
     );
     traverseFiber(
-      rootFiberAlternate,
+      finishedRootFiber,
       { childDepth: 0, siblingsDepth: 0 },
       drawFiberLinks,
     );
