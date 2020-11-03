@@ -1,8 +1,16 @@
 import { Fiber } from './OwnReact';
 import { SVG } from '@svgdotjs/svg.js';
 
-const fiberPrinter = SVG().addTo('#fiberView main').size(600, 540);
-const elementsTreePrinter = SVG().addTo('#elementsTree').size(600, 540);
+const fibersTreeSize = 800;
+const fibersTreeRatio = 0.9;
+const elementsTreeSize = 600;
+const elementsTreeRatio = 0.9;
+const fiberPrinter = SVG()
+  .addTo('#fiberView main')
+  .size(fibersTreeSize, fibersTreeSize * fibersTreeRatio);
+const elementsTreePrinter = SVG()
+  .addTo('#elementsTree')
+  .size(elementsTreeSize, elementsTreeSize * elementsTreeRatio);
 let currentFiberGlobal: Fiber | null = null;
 
 interface PrintDashboardProps {
@@ -62,8 +70,6 @@ function traverseFiber(
     path: { childDepth: number; siblingsDepth: number },
   ) => void,
 ) {
-  // console.log(['traverseFiber'], path);
-
   callback(fiber, path);
 
   if (fiber.child) {
@@ -96,8 +102,6 @@ function traverseFiberElements(
     path: { childDepth: number; siblingsDepth: number },
   ) => void,
 ) {
-  console.log(['traverseFiberElements'], fiber);
-
   callback(fiber, path);
   traverseFiberElementsCounter++;
 
@@ -121,10 +125,10 @@ function traverseFiberElements(
   }
 }
 
-const drawUnit = 9;
+const drawUnit = fibersTreeSize / 60;
 const fiberWidth = 15 * drawUnit;
-const fiberHeight = 10 * drawUnit;
-const jsxLineHeight = 20;
+const fiberHeight = 9 * drawUnit;
+const jsxLineHeight = drawUnit * 1.8;
 const fontFamily = 'sans-serif';
 const colorPalette = {
   white: '#fff',
@@ -165,8 +169,12 @@ function drawFiber(
 
   fiberPrinter
     .text(fiberLabel)
-    .move(cx - 6 * drawUnit, cy - 4 * drawUnit)
-    .font({ fill: colorPalette.black, family: fontFamily })
+    .move(cx - 6.5 * drawUnit, cy - 4 * drawUnit)
+    .font({
+      fill: colorPalette.black,
+      family: fontFamily,
+      size: drawUnit * 1.7,
+    })
     .opacity(opacity);
 
   const propsString = Object.entries(fiber.pendingProps)
@@ -181,31 +189,32 @@ function drawFiber(
 
   fiberPrinter
     .text(propsString)
-    .move(cx - 6 * drawUnit, cy)
-    .font({ fill: '#000', family: fontFamily, size: 10 })
+    .move(cx - 6.5 * drawUnit, cy - drawUnit * 1.5)
+    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit })
     .opacity(opacity);
 }
 
 function drawCurrentFiberInfo(fiber: Fiber) {
-  const cx = 350;
-  const cy = 110;
+  const cx = drawUnit * 38;
+  const cy = drawUnit * 12;
   const fiberLabel = getFiberLabel(fiber);
+  const size = drawUnit * 20;
 
   fiberPrinter
-    .rect(358, 208)
+    .rect(size * 2 + drawUnit, size + drawUnit)
     .attr({ fill: colorPalette.black })
-    .cx(cx - 1)
-    .cy(cy - 1);
+    .cx(cx)
+    .cy(cy);
   fiberPrinter
-    .rect(350, 200)
+    .rect(size * 2, size)
     .attr({ fill: colorPalette.fiberInfo })
     .cx(cx)
     .cy(cy);
 
   fiberPrinter
     .text(fiberLabel)
-    .move(cx - 160, cy - 100)
-    .font({ fill: colorPalette.black, family: fontFamily, size: 30 });
+    .move(cx - drawUnit * 18, drawUnit * 3)
+    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit * 3 });
 
   const propsString = Object.entries(fiber.pendingProps)
     // .filter(([key, value]) => {
@@ -216,9 +225,11 @@ function drawCurrentFiberInfo(fiber: Fiber) {
     //   return true;
     // })
     .map(([key, value]) => {
-      const ellipsisFrom = 30;
+      const ellipsisFrom = drawUnit * 2;
       let formattedValue =
-        typeof value === 'function' ? value.name : JSON.stringify(value);
+        typeof value === 'function'
+          ? value.toString().split('{')[0]
+          : JSON.stringify(value);
 
       if (key === 'children' && Array.isArray(value)) {
         formattedValue = value.reduce((acc, { type }) => `${acc}, ${type}`, '');
@@ -234,8 +245,8 @@ function drawCurrentFiberInfo(fiber: Fiber) {
 
   fiberPrinter
     .text(propsString)
-    .move(cx - 160, cy - 50)
-    .font({ fill: colorPalette.black, family: fontFamily, size: 20 });
+    .move(cx - drawUnit * 18, cy - drawUnit * 5)
+    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit * 2 });
 }
 
 function drawElement(
@@ -244,26 +255,26 @@ function drawElement(
 ) {
   const elementName = getFiberLabel(fiber);
   const drawingCurrent = fiber === currentFiberGlobal;
+  const topMargin = drawUnit;
   const cx = drawUnit * 3 * path.childDepth + fiberWidth / 2;
-  const cy = jsxLineHeight * traverseFiberElementsCounter - drawUnit / 2;
-  const x = cx - 6 * drawUnit + path.childDepth * drawUnit;
+  const cy =
+    jsxLineHeight * traverseFiberElementsCounter - drawUnit / 2 + topMargin;
   const y = cy;
+  const x1 = cx - 6 * drawUnit + path.childDepth * drawUnit;
+  const y1 = y + jsxLineHeight + drawUnit / 3;
+  const x2 = x1 + drawUnit * 6;
+  const y2 = y1;
 
   if (drawingCurrent) {
     elementsTreePrinter
-      .line(
-        x,
-        y + jsxLineHeight + drawUnit / 3,
-        x + drawUnit * 6,
-        y + jsxLineHeight + drawUnit / 3,
-      )
+      .line(x1, y1, x2, y2)
       .stroke({ color: colorPalette.returnArrow, width: drawUnit / 2 });
   }
 
   elementsTreePrinter
     .text(`<${elementName}>`)
-    .move(x, y)
-    .font({ fill: colorPalette.black, family: fontFamily, size: 20 });
+    .move(x1, y)
+    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit * 2 });
 }
 
 function drawFiberLinks(
@@ -273,7 +284,7 @@ function drawFiberLinks(
   const cx = fiberWidth * path.siblingsDepth + fiberWidth / 2;
   const cy = fiberHeight * path.childDepth + fiberHeight / 2;
   const childOrder = getChildOrder(fiber);
-  const arrowSize = 5;
+  const arrowSize = drawUnit / 3;
 
   function getArrowMarker(color: string) {
     return fiberPrinter.marker(arrowSize, arrowSize, function (add) {
