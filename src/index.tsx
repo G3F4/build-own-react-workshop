@@ -3,7 +3,7 @@ import App from './App.tsx';
 import React from 'react';
 import ReactDOM from 'react-dom';
 // @ts-ignore
-import AppWithState from './AppWithState.tsx';
+import AppWithComponent from './AppWithComponent.tsx';
 
 const params = new URLSearchParams(window.location.search);
 
@@ -12,8 +12,8 @@ function getElementToRender(scenarioName: string) {
     return <span>Simplest React App</span>;
   }
 
-  if (scenarioName === 'withState') {
-    return <AppWithState />;
+  if (scenarioName === 'withComponent') {
+    return <AppWithComponent />;
   }
 
   return <App />;
