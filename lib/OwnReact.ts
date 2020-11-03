@@ -195,6 +195,17 @@ const drawUnit = 9;
 const fiberWidth = 15 * drawUnit;
 const fiberHeight = 10 * drawUnit;
 const jsxLineHeight = 20;
+const fontFamily = 'sans-serif';
+const colorPalette = {
+  white: '#fff',
+  black: '#000',
+  fiber: '#adcbe3',
+  fiberInfo: '#e7eff6',
+  childArrow: '#2a4d69',
+  returnArrow: '#4b86b4',
+  siblingArrow: '#63ace5',
+} as const;
+const fiberBackgroundColor = colorPalette.fiber;
 
 function drawFiber(
   fiber: Fiber,
@@ -209,7 +220,7 @@ function drawFiber(
   if (drawingCurrent) {
     fiberPrinter
       .rect(fiberWidth, fiberHeight)
-      .attr({ fill: 'black' })
+      .attr({ fill: colorPalette.black })
       .cx(cx)
       .cy(cy)
       .opacity(opacity);
@@ -217,7 +228,7 @@ function drawFiber(
 
   fiberPrinter
     .rect(fiberWidth - drawUnit, fiberHeight - drawUnit)
-    .attr({ fill: '#f06' })
+    .attr({ fill: fiberBackgroundColor })
     .cx(cx)
     .cy(cy)
     .opacity(opacity);
@@ -225,7 +236,7 @@ function drawFiber(
   fiberPrinter
     .text(fiberLabel)
     .move(cx - 6 * drawUnit, cy - 4 * drawUnit)
-    .font({ fill: '#000', family: 'Inconsolata' })
+    .font({ fill: colorPalette.black, family: fontFamily })
     .opacity(opacity);
 
   const propsString = Object.entries(fiber.pendingProps)
@@ -241,7 +252,7 @@ function drawFiber(
   fiberPrinter
     .text(propsString)
     .move(cx - 6 * drawUnit, cy)
-    .font({ fill: '#000', family: 'Inconsolata', size: 10 })
+    .font({ fill: '#000', family: fontFamily, size: 10 })
     .opacity(opacity);
 }
 
@@ -252,15 +263,19 @@ function drawCurrentFiberInfo(fiber: Fiber) {
 
   fiberPrinter
     .rect(358, 208)
-    .attr({ fill: 'black' })
+    .attr({ fill: colorPalette.black })
     .cx(cx - 1)
     .cy(cy - 1);
-  fiberPrinter.rect(350, 200).attr({ fill: 'green' }).cx(cx).cy(cy);
+  fiberPrinter
+    .rect(350, 200)
+    .attr({ fill: colorPalette.fiberInfo })
+    .cx(cx)
+    .cy(cy);
 
   fiberPrinter
     .text(fiberLabel)
     .move(cx - 160, cy - 100)
-    .font({ fill: '#000', family: 'Inconsolata', size: 30 });
+    .font({ fill: colorPalette.black, family: fontFamily, size: 30 });
 
   const propsString = Object.entries(fiber.pendingProps)
     // .filter(([key, value]) => {
@@ -290,7 +305,7 @@ function drawCurrentFiberInfo(fiber: Fiber) {
   fiberPrinter
     .text(propsString)
     .move(cx - 160, cy - 50)
-    .font({ fill: '#000', family: 'Inconsolata', size: 20 });
+    .font({ fill: colorPalette.black, family: fontFamily, size: 20 });
 }
 
 function drawElement(
@@ -312,13 +327,13 @@ function drawElement(
         x + drawUnit * 6,
         y + jsxLineHeight + drawUnit / 3,
       )
-      .stroke({ color: 'green', width: drawUnit / 2 });
+      .stroke({ color: colorPalette.returnArrow, width: drawUnit / 2 });
   }
 
   elementsTreePrinter
     .text(`<${elementName}>`)
     .move(x, y)
-    .font({ fill: '#000', family: 'Inconsolata', size: 20 });
+    .font({ fill: colorPalette.black, family: fontFamily, size: 20 });
 }
 
 function drawFiberLinks(
@@ -351,15 +366,15 @@ function drawFiberLinks(
         cx + 2 * drawUnit - childOrder * fiberWidth,
         cy - 6 * drawUnit,
       )
-      .stroke({ color: 'green', width: 4, linecap: 'round' })
-      .marker('end', getArrowMarker('green'));
+      .stroke({ color: colorPalette.returnArrow, width: 4, linecap: 'round' })
+      .marker('end', getArrowMarker(colorPalette.returnArrow));
   }
 
   if (fiber.child) {
     fiberPrinter
       .line(cx, cy + 4 * drawUnit, cx, cy + 6 * drawUnit)
-      .stroke({ color: '#f6cd61', width: 4, linecap: 'round' })
-      .marker('end', getArrowMarker('#f6cd61'));
+      .stroke({ color: colorPalette.childArrow, width: 4, linecap: 'round' })
+      .marker('end', getArrowMarker(colorPalette.childArrow));
   }
 
   if (fiber.sibling) {
@@ -370,8 +385,8 @@ function drawFiberLinks(
         cx + 9 * drawUnit,
         cy + 2 * drawUnit,
       )
-      .stroke({ color: '#fe8a71', width: 4, linecap: 'round' })
-      .marker('end', getArrowMarker('#fe8a71'));
+      .stroke({ color: colorPalette.siblingArrow, width: 4, linecap: 'round' })
+      .marker('end', getArrowMarker(colorPalette.siblingArrow));
   }
 }
 
