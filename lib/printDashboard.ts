@@ -254,15 +254,27 @@ function drawElement(
   path: { childDepth: number; siblingsDepth: number },
 ) {
   const elementName = getFiberLabel(fiber);
+  const textSpan = document.createElement('span');
+
+  // @ts-ignore
+  textSpan.style.opacity = 0;
+  // @ts-ignore
+  textSpan.textContent = `<${elementName}>`;
+  document.body.appendChild(textSpan);
+
+  const { width } = textSpan.getBoundingClientRect();
+
+  document.body.removeChild(textSpan);
+
   const drawingCurrent = fiber === currentFiberGlobal;
-  const topMargin = drawUnit;
+  const topMargin = drawUnit / 2;
   const cx = drawUnit * 3 * path.childDepth + fiberWidth / 2;
   const cy =
     jsxLineHeight * traverseFiberElementsCounter - drawUnit / 2 + topMargin;
   const y = cy;
   const x1 = cx - 6 * drawUnit + path.childDepth * drawUnit;
   const y1 = y + jsxLineHeight + drawUnit / 3;
-  const x2 = x1 + drawUnit * 6;
+  const x2 = x1 + width * 1.66;
   const y2 = y1;
 
   if (drawingCurrent) {
