@@ -11,7 +11,7 @@ type Props = Record<string, Prop>;
 const Placement = 2;
 const Update = 4;
 const Deletion = 8;
-type EffectTag = typeof Placement | typeof Update | typeof Deletion;
+export type EffectTag = typeof Placement | typeof Update | typeof Deletion;
 type Tag =
   | typeof FunctionComponent
   | typeof HostRoot
@@ -700,7 +700,7 @@ function createFiberSimple({
   parentFiber = null,
   stateNode = null,
   alternate = null,
-  effectTag = null,
+  effectTag = Placement,
   memoizedState = null,
   pendingProps = {},
   child = null,
@@ -755,7 +755,7 @@ function render(children: ReactElement, container: HTMLElement) {
     () => {
       currentRootFiber = createFiberSimple({
         child: undefined,
-        effectTag: undefined,
+        effectTag: null,
         memoizedState: undefined,
         parentFiber: undefined,
         pendingProps: undefined,

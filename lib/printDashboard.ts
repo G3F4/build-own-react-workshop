@@ -1,4 +1,4 @@
-import { Fiber } from './OwnReact';
+import { EffectTag, Fiber } from './OwnReact';
 import { SVG } from '@svgdotjs/svg.js';
 
 const fibersTreeSize = 800;
@@ -141,6 +141,21 @@ const colorPalette = {
 } as const;
 const fiberBackgroundColor = colorPalette.fiber;
 
+function getEffectTagName(effectTag: EffectTag | null) {
+  if (!effectTag) {
+    return '';
+  }
+
+  switch (effectTag) {
+    case 2:
+      return 'Placement';
+    case 4:
+      return 'Update';
+    case 8:
+      return 'Deletion';
+  }
+}
+
 function drawFiber(
   fiber: Fiber,
   path: { childDepth: number; siblingsDepth: number },
@@ -177,27 +192,16 @@ function drawFiber(
     })
     .opacity(opacity);
 
-  const propsString = Object.entries(fiber.pendingProps)
-    .filter(([key]) => key !== 'children')
-    .map(([key, value]) => {
-      const formattedValue =
-        typeof value === 'function' ? value.name : value.toString();
-
-      return `${key}: ${formattedValue}`;
-    })
-    .join('\n');
-
   fiberPrinter
-    .text(propsString)
+    .text(getEffectTagName(fiber.effectTag))
     .move(cx - 6.5 * drawUnit, cy - drawUnit * 1.5)
-    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit })
+    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit * 2 })
     .opacity(opacity);
 }
 
 function drawCurrentFiberInfo(fiber: Fiber) {
   const cx = drawUnit * 38;
-  const cy = drawUnit * 12;
-  const fiberLabel = getFiberLabel(fiber);
+  const cy = drawUnit * 11;
   const size = drawUnit * 20;
 
   fiberPrinter
@@ -212,18 +216,15 @@ function drawCurrentFiberInfo(fiber: Fiber) {
     .cy(cy);
 
   fiberPrinter
-    .text(fiberLabel)
-    .move(cx - drawUnit * 18, drawUnit * 3)
-    .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit * 3 });
+    .text('Props')
+    .move(cx - drawUnit * 19, drawUnit * 0.5)
+    .font({
+      fill: colorPalette.black,
+      family: fontFamily,
+      size: drawUnit * 2.5,
+    });
 
   const propsString = Object.entries(fiber.pendingProps)
-    // .filter(([key, value]) => {
-    //   if (key === 'children') {
-    //     return typeof value === 'string';
-    //   }
-    //
-    //   return true;
-    // })
     .map(([key, value]) => {
       const ellipsisFrom = drawUnit * 2;
       let formattedValue =
@@ -231,8 +232,29 @@ function drawCurrentFiberInfo(fiber: Fiber) {
           ? value.toString().split('{')[0]
           : JSON.stringify(value);
 
-      if (key === 'children' && Array.isArray(value)) {
-        formattedValue = value.reduce((acc, { type }) => `${acc}, ${type}`, '');
+      if (key === 'children') {
+        if (Array.isArray(value) && value.length > 0) {
+          formattedValue = value.reduce((acc, { type }) => {
+            if (typeof type === 'function') {
+              return type.name;
+            }
+
+            if (acc.length > 0) {
+              return `${acc}, ${type}`;
+            }
+
+            return `${type}`;
+          }, '');
+        } else if (
+          typeof value === 'object' &&
+          typeof (value as any).type === 'function'
+        ) {
+          formattedValue = (value as any).type.name;
+        } else if (typeof value === 'string') {
+          formattedValue = `"${value}"`;
+        } else {
+          return '';
+        }
       }
 
       if (formattedValue.length > ellipsisFrom) {
@@ -245,8 +267,72 @@ function drawCurrentFiberInfo(fiber: Fiber) {
 
   fiberPrinter
     .text(propsString)
-    .move(cx - drawUnit * 18, cy - drawUnit * 5)
+    .move(cx - drawUnit * 18, cy - drawUnit * 8)
     .font({ fill: colorPalette.black, family: fontFamily, size: drawUnit * 2 });
+
+  if (fiber.alternate) {
+    // previous props
+    fiberPrinter
+      .text('Previous props')
+      .move(cx - drawUnit * 19, drawUnit * 10.5)
+      .font({
+        fill: colorPalette.black,
+        family: fontFamily,
+        size: drawUnit * 2.5,
+      });
+
+    const previuosPropsString = Object.entries(fiber.alternate.pendingProps)
+      .map(([key, value]) => {
+        const ellipsisFrom = drawUnit * 2;
+        let formattedValue =
+          typeof value === 'function'
+            ? value.toString().split('{')[0]
+            : JSON.stringify(value);
+
+        if (key === 'children') {
+          console.log(['children'], value);
+
+          if (Array.isArray(value) && value.length > 0) {
+            formattedValue = value.reduce((acc, { type }) => {
+              if (typeof type === 'function') {
+                return type.name;
+              }
+
+              if (acc.length > 0) {
+                return `${acc}, ${type}`;
+              }
+
+              return `${type}`;
+            }, '');
+          } else if (
+            typeof value === 'object' &&
+            typeof (value as any).type === 'function'
+          ) {
+            formattedValue = (value as any).type.name;
+          } else if (typeof value === 'string') {
+            formattedValue = `"${value}"`;
+          } else {
+            return '';
+          }
+        }
+
+        if (formattedValue.length > ellipsisFrom) {
+          formattedValue = formattedValue.slice(0, ellipsisFrom) + '...';
+        }
+
+        return `${key}: ${formattedValue}`;
+      })
+      .join('\n');
+
+    fiberPrinter
+      .text(previuosPropsString)
+      .move(cx - drawUnit * 18, cy + drawUnit * 2)
+      .font({
+        fill: colorPalette.black,
+        family: fontFamily,
+        size: drawUnit * 2,
+      });
+  }
 }
 
 function drawElement(
