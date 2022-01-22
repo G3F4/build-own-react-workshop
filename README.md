@@ -17,7 +17,7 @@ Wszystkie funkcje do implementacji znajdują się w pliku `lib/OwnReact.[ts/js]`
 ## Materiały
 
 ### Wizualizacja procesu pracy na strukturze Fiberów
-![Wizualizacja procesu pracy na strukturze Fiberów](https://admin.indepth.dev/content/images/2019/08/tmp2.gif)
+![Wizualizacja procesu pracy na strukturze Fiberów](https://images.indepth.dev/images/2019/08/tmp2.gif)
 [źródło](https://indepth.dev/inside-fiber-in-depth-overview-of-the-new-reconciliation-algorithm-in-react/)
 
 ### Aplikacja pokazująca proces tworzenia i przetwarzania JSX
