@@ -1,8 +1,6 @@
 {
   "scripts": {
     "dev": "webpack-dev-server --open --mode development",
-    "dev:slim": "webpack-dev-server --config webpack.config.slim.js --open --mode development",
-    "dev:min": "webpack-dev-server --config webpack.config.min.js --open --mode development",
     "start": "http-server dist -c-1",
     "build": "webpack",
     "lint": "eslint ./src ./lib"
