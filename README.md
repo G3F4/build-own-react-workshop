@@ -79,7 +79,7 @@ Jeśli mamy jeden element potomny przekazujemy go jako obiekt.
 
 ### Efekt
 W konsoli widzimy, że funkcja `render` dostała w argumencie poprawny element React reprezentujący wejście do aplikacji (`<App /> w pliku src/index.tsx`)
-
+![](images/1.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/5557b63698e34314f119d7b38674797667dc35c2)
 
 ## Tworzenie Fibera i funkcja `render`
@@ -141,7 +141,7 @@ Zaimplementować funkcję `createFiber` oraz `render`.
 
 ### Efekt
 Funkcja `render` po wywołaniu tworzy pierwszy Fiber, reprezentujący początek pracy do wykonania i zapisuje referencję reprezentujące Fiber związany z kontenerem aplikacji oraz aktualną jednostkę pracy do wykonania.
-
+![](images/2.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/891aee3128e90cf79d25306c76979e5f14eea8b9)
 
 ## Pętla aplikacji
@@ -165,7 +165,7 @@ Zaimplementować funkcję `performSyncWorkOnRoot` oraz wykorzystać `requestIdle
 
 ### Efekt
 W konsoli widzimy, że wykonała się funkcja `performUnitOfWork`, po czym nieskończona pętla się zatrzymała, ponieważ `performUnitOfWork` na razie zwraca `null`.
-
+![](images/3.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/b3eda4c2a784816ff55aa782291a17e530e6ed6b)
 
 ## Rozpoczęcie pracy na Fiberze
@@ -202,7 +202,7 @@ Zaimplementować funkcję `beginWork` i rozpocząć wykonywanie pracy w funkcji 
 
 #### Efekt
 Brak różnic z poprzednim etapem. W konsoli widzimy tylko, że wywołana została funkcja `reconcileChildren` dla Fibera związanego z kontenerem root aplikacji.
-
+![](images/4.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/730ebdba2ee17803e63ab8edc3af20c3d67ee103)
 
 ## Rekoncyliacja (Reconciliation)
@@ -240,7 +240,7 @@ Zaimplementować funkcję `reconcileChildren`
 
 #### Efekt
 Utworzone zostają Fibery dla wszystkich elementów z odpowiednim powiązaniem.
-
+![](images/5.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/a9a42134ee8ae1015e13d313e5f4c202dc188395)
 
 ## Kończenie pracy na Fiberze
@@ -268,7 +268,7 @@ Zaimplementować funkcję `completeUnitOfWork` i wykorzystać w funkcji `perform
 
 #### Efekt
 Odpowiednie Fibery posiadają zapisaną referencję do stworzonych elementów DOM.
-
+![](images/6.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/1db1fc6fb7af22d171f0a50e631aea691071653c)
 
 ## Dokonywanie wyników pracy
@@ -280,7 +280,7 @@ Dzięki wcześniej stworzonym powiązaniom, rekurencyjne przejście po wszystkic
 Zaimplementować funkcję `commitWork` i wykorzystać w funkcji `performSyncWorkOnRoot` do rozpoczęcia procesu dodawania elementów DOM do kontenera aplikacji.
 
 #### Kroki
-* W funkcji `performSyncWorkOnRoot` jeśli pętle `while` zakończy pracę (funkcja `beginWork`), wywołujemy funkcję `commitWork` (dalej wewnątrz pętli)
+* W funkcji `performSyncWorkOnRoot` jeśli pętle `while` zakończy pracę (funkcja `beginWork`), wywołujemy funkcję `commitWork` (dalej wewnątrz `if`)
     * jako argument przekazujemy dziecko Fibera związanego z kontenerem aplikacji (`workInProgressRoot`).
 * Dodanie implementacji funkcji `commitWork`
     * jako argument dostaje Fiber
@@ -298,7 +298,7 @@ Zaimplementować funkcję `commitWork` i wykorzystać w funkcji `performSyncWork
 
 #### Efekt
 Struktura DOM widoczna.
-
+![](images/7.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/122a5746281b7262a649c9defd42d17f3d559738)
 
 ## Aktualizacja właściwości elementu DOM
@@ -309,7 +309,7 @@ Elementy powinny wyświetlać tekst, nadawać style inline oraz dodawać nasłuc
 Zaimplementować funkcję `updateProperties` i wykorzystać w funkcji `commitWork`
 
 #### Kroki
-* Wywołać `updateProperties` w funkcji `commitWork` zaraz po linijce ze dodaniem elementu DOM do nadrzędnego elementu (`closestParentWithNode.stateNode.appendChild(fiber.stateNode);`)
+* Wywołać `updateProperties` w funkcji `commitWork` zaraz po linijce z dodaniem elementu DOM do nadrzędnego elementu (`closestParentWithNode.stateNode.appendChild(fiber.stateNode);`)
     * jako argument przekazać Fiber z domknięcia funkcji `commitWork`
 * Dodać implementację funkcji `updateProperties`
     * jako argument dostaje Fiber
@@ -339,5 +339,5 @@ Zaimplementować funkcję `updateProperties` i wykorzystać w funkcji `commitWor
 
 #### Efekt
 Wyrenderowana aplikacja, która reaguje na kliknięcia w przyciski (logi w konsoli).
-
+![](images/8.png)
 [Rozwiązanie](https://github.com/G3F4/warsawjs-workshop-45-own-react/commit/dedcfc95f792229aec1ff64412e872774aed1b52)
